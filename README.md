@@ -28,6 +28,11 @@ El exportador genera `public/data/opportunities.json` con campos públicos de
 SICOP. No incluye perfiles comerciales, documentos, notas internas ni datos
 privados.
 
+Cuando `data/portal_sync.json` está configurado en la aplicación de escritorio,
+cada actualización exitosa también envía ese mismo paquete público a la base
+privada del portal. La ruta `/api/opportunities` se consulta primero; el archivo
+estático funciona como respaldo si la sincronización remota no está disponible.
+
 ## Desarrollo local
 
 ```bash

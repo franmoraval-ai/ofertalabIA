@@ -746,11 +746,18 @@ export default function Home() {
 
   useEffect(() => {
     let active = true;
-    fetch("/data/opportunities.json", { cache: "no-store" })
-      .then((response) => {
-        if (!response.ok) throw new Error(`HTTP ${response.status}`);
-        return response.json() as Promise<OpportunityFeed>;
-      })
+    const loadFeed = async () => {
+      for (const source of ["/api/opportunities", "/data/opportunities.json"]) {
+        const response = await fetch(source, { cache: "no-store" });
+        if (!response.ok) continue;
+        const feed = (await response.json()) as OpportunityFeed;
+        if (Array.isArray(feed.opportunities) && feed.opportunities.length) {
+          return feed;
+        }
+      }
+      throw new Error("No hay una fuente de oportunidades disponible.");
+    };
+    loadFeed()
       .then((feed) => {
         if (!active || !Array.isArray(feed.opportunities)) return;
         setOpportunities(feed.opportunities.map(clientOpportunity));
