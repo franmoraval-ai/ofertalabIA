@@ -1,6 +1,10 @@
 "use client";
 
 import { FormEvent, useEffect, useState } from "react";
+import {
+  describeProfileSector,
+  rankOpportunities,
+} from "./opportunity-matching";
 
 type View = "inicio" | "registro" | "oportunidades" | "empresa";
 type ServiceKey = "autogestion" | "asistida" | "integral";
@@ -22,6 +26,7 @@ type Opportunity = {
   fit: string;
   risk: string;
   tags: string[];
+  keywords: string[];
 };
 
 const opportunities: Opportunity[] = [
@@ -35,6 +40,7 @@ const opportunities: Opportunity[] = [
     fit: "Coincide con seguridad, cámaras y mantenimiento",
     risk: "Falta confirmar experiencia mínima",
     tags: ["Seguridad", "Mantenimiento", "Alta afinidad"],
+    keywords: ["seguridad", "cámaras", "videovigilancia", "monitoreo"],
   },
   {
     id: "2026LE-000014-0001100001",
@@ -46,6 +52,7 @@ const opportunities: Opportunity[] = [
     fit: "Coincide con instalación y climatización",
     risk: "Requiere visita técnica",
     tags: ["Climatización", "Instalación"],
+    keywords: ["aire acondicionado", "climatización", "refrigeración", "hvac"],
   },
   {
     id: "2026LD-000089-0007300001",
@@ -57,6 +64,43 @@ const opportunities: Opportunity[] = [
     fit: "Coincide con monitoreo y respuesta",
     risk: "Garantía de participación por revisar",
     tags: ["Alarmas", "Servicio recurrente"],
+    keywords: ["seguridad", "alarmas", "monitoreo", "vigilancia"],
+  },
+  {
+    id: "DEMO-ALI-001",
+    score: 93,
+    institution: "Ministerio de Educación Pública",
+    title: "Servicio de alimentación para centros educativos",
+    closes: "Cierra en 6 días",
+    amount: "₡24,8 millones estimados",
+    fit: "Coincide con preparación y entrega de alimentos",
+    risk: "Requiere permiso sanitario y menú nutricional",
+    tags: ["Alimentación", "Entrega", "Alta afinidad"],
+    keywords: ["comida", "alimentos", "comedor", "cocina", "catering"],
+  },
+  {
+    id: "DEMO-ALI-002",
+    score: 88,
+    institution: "Caja Costarricense de Seguro Social",
+    title: "Suministro periódico de frutas, verduras y abarrotes",
+    closes: "Cierra en 10 días",
+    amount: "₡15,6 millones estimados",
+    fit: "Coincide con venta y distribución de alimentos",
+    risk: "Debe confirmar cadena de frío y capacidad de entrega",
+    tags: ["Víveres", "Distribución", "Alimentos"],
+    keywords: ["alimentos", "víveres", "abarrotes", "frutas", "verduras"],
+  },
+  {
+    id: "DEMO-ALI-003",
+    score: 84,
+    institution: "Universidad Nacional",
+    title: "Servicio de catering para actividades institucionales",
+    closes: "Cierra en 14 días",
+    amount: "Monto según demanda",
+    fit: "Coincide con catering y comida preparada",
+    risk: "Requiere cotización por tipo de evento",
+    tags: ["Catering", "Eventos", "Alimentación"],
+    keywords: ["catering", "comida", "restaurante", "alimentación", "cocina"],
   },
 ];
 
@@ -466,6 +510,14 @@ function Dashboard({
   profile: Profile;
   onService: (item: Opportunity) => void;
 }) {
+  const matches = rankOpportunities(profile.products, opportunities);
+  const visibleOpportunities = matches.slice(0, 3);
+  const sector = describeProfileSector(profile.products);
+  const urgent = visibleOpportunities.filter((item) => {
+    const days = Number(item.closes.match(/\d+/)?.[0] ?? 99);
+    return days <= 7;
+  }).length;
+
   return (
     <main className="dashboard">
       <section className="dashboard-heading">
@@ -473,9 +525,16 @@ function Dashboard({
           <span className="eyebrow">Oportunidades para su empresa</span>
           <h1>
             Hola, {profile.contact || "Marco"}.
-            <span> Hay buenas opciones para revisar.</span>
+            <span>
+              {visibleOpportunities.length
+                ? " Encontramos opciones relacionadas con lo que vende."
+                : " Todavía no encontramos una coincidencia segura."}
+            </span>
           </h1>
-          <p>Ordenamos cada contratación por compatibilidad, urgencia y cumplimiento.</p>
+          <p>
+            Buscamos únicamente en <strong>{sector}</strong> y descartamos sectores
+            ajenos a su perfil.
+          </p>
         </div>
         <div className="profile-health">
           <div>
@@ -487,9 +546,17 @@ function Dashboard({
       </section>
       <section className="dashboard-stats">
         {[
-          ["Recomendadas", "12", "3 con afinidad alta"],
-          ["Cierran esta semana", "4", "La más urgente: 5 días"],
-          ["Valor potencial", "₡86M", "En oportunidades compatibles"],
+          [
+            "Recomendadas",
+            String(visibleOpportunities.length),
+            "Coincidencias verificables en esta demostración",
+          ],
+          [
+            "Cierran esta semana",
+            String(urgent),
+            urgent ? "Conviene revisarlas primero" : "Sin urgencias detectadas",
+          ],
+          ["Sector detectado", sector, `Según: ${profile.products}`],
         ].map(([label, value, detail]) => (
           <div key={label}>
             <small>{label}</small>
@@ -507,9 +574,22 @@ function Dashboard({
           <button className="filter-button">Afinidad más alta⌄</button>
         </div>
         <div className="opportunity-list">
-          {opportunities.map((item) => (
-            <OpportunityCard key={item.id} item={item} onOpen={onService} />
-          ))}
+          {visibleOpportunities.length ? (
+            visibleOpportunities.map((item) => (
+              <OpportunityCard key={item.id} item={item} onOpen={onService} />
+            ))
+          ) : (
+            <article className="opportunity-card">
+              <div className="opportunity-main">
+                <h3>No mostraremos oportunidades de sectores diferentes</h3>
+                <p>
+                  Amplíe la descripción de sus productos o servicios para buscar
+                  sinónimos más precisos. Por ejemplo: “comida preparada, catering y
+                  entrega de almuerzos”.
+                </p>
+              </div>
+            </article>
+          )}
         </div>
       </section>
     </main>
