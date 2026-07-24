@@ -1,48 +1,29 @@
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
-import { register } from "node:module";
 import test from "node:test";
 
-register("./cloudflare-loader.mjs", import.meta.url);
-
-async function render() {
-  const workerUrl = new URL("../dist/server/index.js", import.meta.url);
-  workerUrl.searchParams.set("test", `${process.pid}-${Date.now()}`);
-  const { default: worker } = await import(workerUrl.href);
-
-  return worker.fetch(
-    new Request("http://localhost/", {
-      headers: { accept: "text/html" },
-    }),
-    {
-      ASSETS: {
-        fetch: async () => new Response("Not found", { status: 404 }),
-      },
-    },
-    {
-      waitUntil() {},
-      passThroughOnException() {},
-    },
-  );
+async function readSource(relativePath) {
+  return readFile(new URL(relativePath, import.meta.url), "utf8");
 }
 
-test("server-renders the OfertaLab IA client experience", async () => {
-  const response = await render();
-  assert.equal(response.status, 200);
-  assert.match(response.headers.get("content-type") ?? "", /^text\/html\b/i);
+test("the layout exposes the OfertaLab IA client metadata", async () => {
+  const layout = await readSource("../app/layout.tsx");
+  assert.match(layout, /title:\s*"OfertaLab IA Clientes"/);
+  assert.match(layout, /Su empresa también puede venderle al Estado/);
+});
 
-  const html = await response.text();
-  assert.match(html, /<title>OfertaLab IA Clientes<\/title>/i);
-  assert.match(html, /Su empresa también puede/);
-  assert.match(html, /venderle al Estado/);
-  assert.match(html, /Quiero empezar a ofertar/);
-  assert.match(html, /Datos públicos de SICOP/);
-  assert.match(html, /No le enviamos cientos de concursos/);
-  assert.doesNotMatch(html, /codex-preview|react-loading-skeleton/i);
+test("the client experience keeps its core marketing copy", async () => {
+  const page = await readSource("../app/page.tsx");
+  assert.match(page, /Su empresa también puede/);
+  assert.match(page, /venderle al Estado/);
+  assert.match(page, /Quiero empezar a ofertar/);
+  assert.match(page, /Datos públicos de SICOP/);
+  assert.match(page, /No le enviamos cientos de concursos/);
+  assert.doesNotMatch(page, /codex-preview|react-loading-skeleton/i);
 });
 
 test("includes the three service choices in the client experience", async () => {
-  const html = await readFile(new URL("../app/page.tsx", import.meta.url), "utf8");
+  const html = await readSource("../app/page.tsx");
   assert.match(html, /Quiero hacerlo yo/);
   assert.match(html, /Prepárenme la oferta/);
   assert.match(html, /Encárguense de todo/);

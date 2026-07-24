@@ -6,7 +6,7 @@ import {
   rankOpportunities,
 } from "./opportunity-matching";
 
-type View = "inicio" | "registro" | "oportunidades" | "empresa";
+type View = "inicio" | "registro" | "oportunidades" | "empresa" | "solicitudes";
 type ServiceKey = "autogestion" | "asistida" | "integral";
 type Profile = {
   name: string;
@@ -15,6 +15,16 @@ type Profile = {
   province: string;
   experience: string;
   capacity: string;
+};
+type ServiceRequest = {
+  id: string;
+  opportunityId: string;
+  opportunityTitle: string;
+  institution: string;
+  service: ServiceKey;
+  serviceTitle: string;
+  status: string;
+  createdAt: string;
 };
 type Opportunity = {
   id: string;
@@ -28,6 +38,7 @@ type Opportunity = {
   risk: string;
   tags: string[];
   keywords: string[];
+  matchedTerms: string[];
   sourceUrl: string;
 };
 
@@ -78,6 +89,7 @@ function clientOpportunity(item: PublicOpportunity): Opportunity {
       item.classification_code,
       item.procedure_type,
     ].filter(Boolean),
+    matchedTerms: [],
     sourceUrl: item.source_url,
   };
 }
@@ -133,6 +145,13 @@ const blankProfile: Profile = {
   capacity: "Hasta ₡10 millones",
 };
 
+const REQUEST_STAGES = [
+  "Solicitada",
+  "En revisión del equipo",
+  "Propuesta enviada",
+  "Aprobada y firmada por usted",
+] as const;
+
 function Brand() {
   return (
     <span className="brand">
@@ -163,6 +182,7 @@ function Header({
         {[
           ["inicio", "Inicio"],
           ["oportunidades", "Oportunidades"],
+          ["solicitudes", "Mis solicitudes"],
           ["empresa", "Mi empresa"],
         ].map(([target, label]) => (
           <button
@@ -461,8 +481,12 @@ function OpportunityCard({
         </div>
         <div className="opportunity-summary">
           <p>
-            <small>Encaje</small>
-            <strong>{item.fit}</strong>
+            <small>Por qué coincide</small>
+            <strong>
+              {item.matchedTerms.length
+                ? `Coincide con: ${item.matchedTerms.slice(0, 4).join(", ")}`
+                : item.fit}
+            </strong>
           </p>
           <p>
             <small>Atención</small>
@@ -473,6 +497,13 @@ function OpportunityCard({
             <strong>{item.amount}</strong>
           </p>
         </div>
+        {item.matchedTerms.length > 0 && (
+          <div className="match-terms" aria-label="Palabras de su perfil que coinciden">
+            {item.matchedTerms.slice(0, 6).map((term) => (
+              <span key={term}>{term}</span>
+            ))}
+          </div>
+        )}
       </div>
       <div className="opportunity-actions">
         {item.sourceUrl && (
@@ -648,12 +679,23 @@ function Business({ profile }: { profile: Profile }) {
 function ServiceModal({
   opportunity,
   onClose,
+  onRequest,
+  onGoToRequests,
 }: {
   opportunity: Opportunity;
   onClose: () => void;
+  onRequest: (opportunity: Opportunity, service: ServiceKey) => void;
+  onGoToRequests: () => void;
 }) {
   const [selected, setSelected] = useState<ServiceKey | null>(null);
   const [requested, setRequested] = useState(false);
+
+  function confirm() {
+    if (!selected) return;
+    onRequest(opportunity, selected);
+    setRequested(true);
+  }
+
   return (
     <div className="modal-backdrop">
       <section className="service-modal" role="dialog" aria-modal="true">
@@ -663,15 +705,21 @@ function ServiceModal({
         {requested ? (
           <div className="request-success">
             <span>✓</span>
-            <small>Solicitud de demostración registrada</small>
+            <small>Solicitud registrada</small>
             <h2>Ya sabemos cómo quiere participar.</h2>
             <p>
-              En la versión operativa aquí verá precio, contrato, responsable y
-              próximos pasos.
+              Guardamos su solicitud en este dispositivo. El equipo de OfertaLab IA
+              revisará la contratación y le enviará una propuesta. Usted siempre
+              acuerda el precio, aprueba y firma; el prototipo no procesa pagos.
             </p>
-            <button className="primary" onClick={onClose}>
-              Volver a oportunidades
-            </button>
+            <div className="request-success-actions">
+              <button className="primary" onClick={onGoToRequests}>
+                Ver seguimiento
+              </button>
+              <button className="secondary" onClick={onClose}>
+                Volver a oportunidades
+              </button>
+            </div>
           </div>
         ) : (
           <>
@@ -710,9 +758,9 @@ function ServiceModal({
               <button
                 className="primary"
                 disabled={!selected}
-                onClick={() => setRequested(true)}
+                onClick={confirm}
               >
-                Continuar
+                Solicitar este servicio
                 <span>→</span>
               </button>
             </div>
@@ -720,6 +768,88 @@ function ServiceModal({
         )}
       </section>
     </div>
+  );
+}
+
+function Requests({
+  requests,
+  onExplore,
+  onCancel,
+}: {
+  requests: ServiceRequest[];
+  onExplore: () => void;
+  onCancel: (id: string) => void;
+}) {
+  return (
+    <main className="requests-page">
+      <section className="requests-header">
+        <span className="eyebrow">Mis solicitudes</span>
+        <h1>Seguimiento de sus servicios</h1>
+        <p>
+          Aquí verá el estado de cada acompañamiento que solicitó. El equipo acuerda
+          el precio con usted; siempre aprueba y firma. Este prototipo no procesa
+          pagos ni credenciales de SICOP.
+        </p>
+      </section>
+      {requests.length ? (
+        <section className="requests-list">
+          {requests.map((request) => {
+            const currentStep = REQUEST_STAGES.indexOf(
+              request.status as (typeof REQUEST_STAGES)[number],
+            );
+            return (
+              <article key={request.id} className="request-card">
+                <div className="request-card-head">
+                  <div>
+                    <span className="request-service">{request.serviceTitle}</span>
+                    <h3>{request.opportunityTitle}</h3>
+                    <p className="request-institution">{request.institution}</p>
+                  </div>
+                  <span className="request-status">{request.status}</span>
+                </div>
+                <ol className="request-timeline" aria-label="Etapas del servicio">
+                  {REQUEST_STAGES.map((stage, index) => (
+                    <li
+                      key={stage}
+                      className={index <= currentStep ? "done" : ""}
+                    >
+                      <span className="dot" />
+                      {stage}
+                    </li>
+                  ))}
+                </ol>
+                <div className="request-card-footer">
+                  <small>
+                    Solicitada:{" "}
+                    {new Intl.DateTimeFormat("es-CR", {
+                      dateStyle: "medium",
+                      timeStyle: "short",
+                    }).format(new Date(request.createdAt))}
+                  </small>
+                  <button
+                    className="request-cancel"
+                    onClick={() => onCancel(request.id)}
+                  >
+                    Cancelar solicitud
+                  </button>
+                </div>
+              </article>
+            );
+          })}
+        </section>
+      ) : (
+        <section className="requests-empty">
+          <h2>Todavía no ha solicitado ningún servicio.</h2>
+          <p>
+            Cuando elija Autogestión, Oferta asistida o Gestión integral en una
+            oportunidad, aparecerá aquí para darle seguimiento.
+          </p>
+          <button className="primary" onClick={onExplore}>
+            Ver oportunidades
+          </button>
+        </section>
+      )}
+    </main>
   );
 }
 
@@ -731,6 +861,7 @@ export default function Home() {
   const [opportunities, setOpportunities] = useState<Opportunity[]>([]);
   const [feedStatus, setFeedStatus] = useState<FeedStatus>("loading");
   const [generatedAt, setGeneratedAt] = useState("");
+  const [requests, setRequests] = useState<ServiceRequest[]>([]);
 
   useEffect(() => {
     const saved = window.localStorage.getItem("ofertalab-client-profile");
@@ -741,6 +872,17 @@ export default function Home() {
       setView("oportunidades");
     } catch {
       window.localStorage.removeItem("ofertalab-client-profile");
+    }
+  }, []);
+
+  useEffect(() => {
+    const saved = window.localStorage.getItem("ofertalab-client-requests");
+    if (!saved) return;
+    try {
+      const parsed = JSON.parse(saved);
+      if (Array.isArray(parsed)) setRequests(parsed);
+    } catch {
+      window.localStorage.removeItem("ofertalab-client-requests");
     }
   }, []);
 
@@ -779,6 +921,46 @@ export default function Home() {
     setView("oportunidades");
   }
 
+  function persistRequests(next: ServiceRequest[]) {
+    setRequests(next);
+    window.localStorage.setItem(
+      "ofertalab-client-requests",
+      JSON.stringify(next),
+    );
+  }
+
+  function requestService(opportunity: Opportunity, service: ServiceKey) {
+    const id = `${opportunity.id}::${service}`;
+    const entry: ServiceRequest = {
+      id,
+      opportunityId: opportunity.id,
+      opportunityTitle: opportunity.title,
+      institution: opportunity.institution,
+      service,
+      serviceTitle: services[service].title,
+      status: REQUEST_STAGES[0],
+      createdAt: new Date().toISOString(),
+    };
+    persistRequests([entry, ...requests.filter((item) => item.id !== id)]);
+    void fetch("/api/requests", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        opportunity_id: opportunity.id,
+        opportunity_title: opportunity.title,
+        institution: opportunity.institution,
+        service,
+        contact_name: profile.contact || profile.name,
+      }),
+    }).catch(() => {
+      /* La solicitud queda guardada localmente aunque el envío falle. */
+    });
+  }
+
+  function cancelRequest(id: string) {
+    persistRequests(requests.filter((item) => item.id !== id));
+  }
+
   function demo() {
     if (!hasProfile)
       setProfile({
@@ -809,6 +991,13 @@ export default function Home() {
         />
       )}
       {view === "empresa" && <Business profile={profile} />}
+      {view === "solicitudes" && (
+        <Requests
+          requests={requests}
+          onExplore={() => setView(hasProfile ? "oportunidades" : "registro")}
+          onCancel={cancelRequest}
+        />
+      )}
       <footer>
         <Brand />
         <p>
@@ -822,11 +1011,24 @@ export default function Home() {
         <button onClick={() => setView(hasProfile ? "oportunidades" : "registro")}>
           ◇<span>Oportunidades</span>
         </button>
+        <button onClick={() => setView(hasProfile ? "solicitudes" : "registro")}>
+          ▤<span>Solicitudes</span>
+        </button>
         <button onClick={() => setView(hasProfile ? "empresa" : "registro")}>
           ○<span>Mi empresa</span>
         </button>
       </nav>
-      {selected && <ServiceModal opportunity={selected} onClose={() => setSelected(null)} />}
+      {selected && (
+        <ServiceModal
+          opportunity={selected}
+          onClose={() => setSelected(null)}
+          onRequest={requestService}
+          onGoToRequests={() => {
+            setSelected(null);
+            setView("solicitudes");
+          }}
+        />
+      )}
     </div>
   );
 }

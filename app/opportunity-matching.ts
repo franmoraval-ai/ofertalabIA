@@ -6,6 +6,7 @@ export type MatchableOpportunity = {
   fit: string;
   tags: string[];
   keywords: string[];
+  matchedTerms?: string[];
 };
 
 const ignoredWords = new Set([
@@ -150,12 +151,14 @@ export function rankOpportunities<T extends MatchableOpportunity>(
         opportunity,
         relevance: matches.size * 100 + opportunity.score,
         matchCount: matches.size,
+        matchedTerms: [...matches],
       };
     })
     .filter(({ relevance }) => relevance >= 100)
     .sort((left, right) => right.relevance - left.relevance)
-    .map(({ opportunity, matchCount }) => ({
+    .map(({ opportunity, matchCount, matchedTerms }) => ({
       ...opportunity,
       score: Math.min(98, 72 + matchCount * 6),
+      matchedTerms,
     }));
 }

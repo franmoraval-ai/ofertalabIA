@@ -1,13 +1,26 @@
-import { env } from "cloudflare:workers";
-import { drizzle } from "drizzle-orm/d1";
+import { drizzle } from "drizzle-orm/postgres-js";
+import postgres from "postgres";
 import * as schema from "./schema";
 
-export function getDb() {
-  if (!env.DB) {
+type DrizzleClient = ReturnType<typeof drizzle<typeof schema>>;
+
+let cachedClient: ReturnType<typeof postgres> | undefined;
+let cachedDb: DrizzleClient | undefined;
+
+export function getDb(): DrizzleClient {
+  const url = process.env.DATABASE_URL;
+  if (!url) {
     throw new Error(
-      "Cloudflare D1 binding `DB` is unavailable. Set the `d1` field in .openai/hosting.json to `DB` or let your control plane inject the real binding values before using the database."
+      "DATABASE_URL no está configurada. Copia la connection string de Supabase (pooler, modo transacción) en .env.local y en las variables de entorno de Vercel.",
     );
   }
 
-  return drizzle(env.DB, { schema });
+  if (!cachedDb) {
+    // `prepare: false` es obligatorio con el pooler de Supabase en modo transacción
+    // (Supavisor/PgBouncer) y funciona bien en entornos serverless como Vercel.
+    cachedClient = postgres(url, { prepare: false });
+    cachedDb = drizzle(cachedClient, { schema });
+  }
+
+  return cachedDb;
 }

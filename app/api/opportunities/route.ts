@@ -1,37 +1,46 @@
-import { env } from "cloudflare:workers";
+import { asc, desc, eq } from "drizzle-orm";
 
-type RuntimeEnvironment = {
-  DB?: D1Database;
-};
+import { getDb } from "../../../db";
+import { portalOpportunities, portalSyncState } from "../../../db/schema";
+
+export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
 
 export async function GET() {
-  const runtime = env as unknown as RuntimeEnvironment;
-  if (!runtime.DB) {
-    return Response.json({ error: "Base del portal no disponible." }, { status: 503 });
-  }
-
   try {
-    const [opportunityResult, stateResult] = await runtime.DB.batch([
-      runtime.DB.prepare(
-        `
-        SELECT procedure_no, cartel_no, title, institution, procedure_type,
-               status, publication_date, opening_date, classification_code,
-               source_url
-        FROM portal_opportunities
-        ORDER BY opening_date ASC, publication_date DESC, procedure_no ASC
-        LIMIT 2000
-        `,
-      ),
-      runtime.DB.prepare(
-        `
-        SELECT generated_at, source_updated_at, opportunity_count
-        FROM portal_sync_state
-        WHERE id=1
-        `,
-      ),
-    ]);
-    const state = (stateResult.results?.[0] ?? {}) as Record<string, unknown>;
-    const opportunities = opportunityResult.results ?? [];
+    const db = getDb();
+    const opportunities = await db
+      .select({
+        procedure_no: portalOpportunities.procedureNo,
+        cartel_no: portalOpportunities.cartelNo,
+        title: portalOpportunities.title,
+        institution: portalOpportunities.institution,
+        procedure_type: portalOpportunities.procedureType,
+        status: portalOpportunities.status,
+        publication_date: portalOpportunities.publicationDate,
+        opening_date: portalOpportunities.openingDate,
+        classification_code: portalOpportunities.classificationCode,
+        source_url: portalOpportunities.sourceUrl,
+      })
+      .from(portalOpportunities)
+      .orderBy(
+        asc(portalOpportunities.openingDate),
+        desc(portalOpportunities.publicationDate),
+        asc(portalOpportunities.procedureNo),
+      )
+      .limit(2000);
+
+    const stateRows = await db
+      .select({
+        generated_at: portalSyncState.generatedAt,
+        source_updated_at: portalSyncState.sourceUpdatedAt,
+        opportunity_count: portalSyncState.opportunityCount,
+      })
+      .from(portalSyncState)
+      .where(eq(portalSyncState.id, 1))
+      .limit(1);
+    const state = stateRows[0] ?? {};
+
     return Response.json({
       schema_version: 1,
       generated_at: String(state.generated_at ?? ""),

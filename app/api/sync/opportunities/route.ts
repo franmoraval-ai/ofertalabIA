@@ -1,79 +1,63 @@
-import { env } from "cloudflare:workers";
-
+import { getDb } from "../../../../db";
+import { portalOpportunities, portalSyncState } from "../../../../db/schema";
 import {
   hasValidSyncToken,
   validateOpportunityFeed,
 } from "../opportunity-feed";
 
-type RuntimeEnvironment = {
-  DB?: D1Database;
-  OFERTALAB_SYNC_TOKEN?: string;
-};
-
-const COLUMNS = [
-  "procedure_no",
-  "cartel_no",
-  "title",
-  "institution",
-  "procedure_type",
-  "status",
-  "publication_date",
-  "opening_date",
-  "classification_code",
-  "source_url",
-] as const;
+export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
 
 export async function POST(request: Request) {
-  const runtime = env as unknown as RuntimeEnvironment;
   if (
     !hasValidSyncToken(
       request.headers.get("authorization"),
-      runtime.OFERTALAB_SYNC_TOKEN,
+      process.env.OFERTALAB_SYNC_TOKEN,
     )
   ) {
     return Response.json({ error: "No autorizado." }, { status: 401 });
   }
-  if (!runtime.DB) {
-    return Response.json({ error: "Base del portal no disponible." }, { status: 503 });
-  }
 
   try {
     const feed = validateOpportunityFeed(await request.json());
-    const statements: D1PreparedStatement[] = [
-      runtime.DB.prepare("DELETE FROM portal_opportunities"),
-    ];
+    const db = getDb();
 
-    for (let index = 0; index < feed.opportunities.length; index += 8) {
-      const chunk = feed.opportunities.slice(index, index + 8);
-      const placeholders = chunk
-        .map(() => `(${COLUMNS.map(() => "?").join(",")})`)
-        .join(",");
-      const values = chunk.flatMap((item) => COLUMNS.map((column) => item[column]));
-      statements.push(
-        runtime.DB.prepare(
-          `INSERT INTO portal_opportunities (${COLUMNS.join(",")}) VALUES ${placeholders}`,
-        ).bind(...values),
-      );
-    }
+    const rows = feed.opportunities.map((item) => ({
+      procedureNo: item.procedure_no,
+      cartelNo: item.cartel_no,
+      title: item.title,
+      institution: item.institution,
+      procedureType: item.procedure_type,
+      status: item.status,
+      publicationDate: item.publication_date,
+      openingDate: item.opening_date,
+      classificationCode: item.classification_code,
+      sourceUrl: item.source_url,
+    }));
 
-    statements.push(
-      runtime.DB.prepare(
-        `
-        INSERT INTO portal_sync_state (
-          id, generated_at, source_updated_at, opportunity_count
-        ) VALUES (1, ?, ?, ?)
-        ON CONFLICT(id) DO UPDATE SET
-          generated_at=excluded.generated_at,
-          source_updated_at=excluded.source_updated_at,
-          opportunity_count=excluded.opportunity_count
-        `,
-      ).bind(
-        feed.generated_at,
-        feed.source_updated_at,
-        feed.opportunities.length,
-      ),
-    );
-    await runtime.DB.batch(statements);
+    await db.transaction(async (tx) => {
+      await tx.delete(portalOpportunities);
+      for (let index = 0; index < rows.length; index += 500) {
+        await tx.insert(portalOpportunities).values(rows.slice(index, index + 500));
+      }
+      await tx
+        .insert(portalSyncState)
+        .values({
+          id: 1,
+          generatedAt: feed.generated_at,
+          sourceUpdatedAt: feed.source_updated_at,
+          opportunityCount: feed.opportunities.length,
+        })
+        .onConflictDoUpdate({
+          target: portalSyncState.id,
+          set: {
+            generatedAt: feed.generated_at,
+            sourceUpdatedAt: feed.source_updated_at,
+            opportunityCount: feed.opportunities.length,
+          },
+        });
+    });
+
     return Response.json(
       {
         synchronized: true,
