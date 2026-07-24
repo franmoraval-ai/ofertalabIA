@@ -1,3 +1,5 @@
+import { businessSectors } from "./business-taxonomy.ts";
+
 export type MatchableOpportunity = {
   score: number;
   title: string;
@@ -5,76 +7,6 @@ export type MatchableOpportunity = {
   tags: string[];
   keywords: string[];
 };
-
-const synonymGroups = [
-  {
-    label: "Alimentos y alimentación",
-    terms: [
-      "alimento",
-      "alimentacion",
-      "comida",
-      "catering",
-      "comedor",
-      "restaurante",
-      "abarrote",
-      "viveres",
-      "cocina",
-      "fruta",
-      "verdura",
-    ],
-    excludes: [
-      "alimentacion ininterrumpida",
-      "sistema de alimentacion",
-      "fuente de alimentacion",
-      "alimentacion electrica",
-      "ups",
-      "alimento para animales",
-      "alimento animal",
-      "analisis microbiologico",
-    ],
-  },
-  {
-    label: "Seguridad electrónica",
-    terms: [
-      "seguridad",
-      "camara",
-      "videovigilancia",
-      "alarma",
-      "monitoreo",
-      "vigilancia",
-      "proteccion",
-    ],
-    excludes: [],
-  },
-  {
-    label: "Climatización",
-    terms: [
-      "aire acondicionado",
-      "climatizacion",
-      "refrigeracion",
-      "ventilacion",
-      "hvac",
-    ],
-    excludes: [],
-  },
-  {
-    label: "Limpieza",
-    terms: ["limpieza", "aseo", "desinfeccion", "higiene", "sanitizacion"],
-    excludes: [],
-  },
-  {
-    label: "Tecnología",
-    terms: [
-      "computadora",
-      "tecnologia",
-      "software",
-      "informatica",
-      "servidor",
-      "redes",
-    ],
-    excludes: [],
-  },
-] as const;
 
 const ignoredWords = new Set([
   "con",
@@ -90,6 +22,14 @@ const ignoredWords = new Set([
   "productos",
   "venta",
   "vendo",
+  "empresa",
+  "general",
+  "mantenimiento",
+  "instalacion",
+  "equipo",
+  "equipos",
+  "suministro",
+  "comercializacion",
 ]);
 
 export function normalizeBusinessText(value: string) {
@@ -102,41 +42,71 @@ export function normalizeBusinessText(value: string) {
     .trim();
 }
 
+function escapePattern(value: string) {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+export function matchesBusinessTerm(text: string, term: string) {
+  const normalizedText = normalizeBusinessText(text);
+  const normalizedTerm = normalizeBusinessText(term);
+  if (!normalizedText || !normalizedTerm) return false;
+  const pluralSuffix = normalizedTerm.endsWith("s") ? "" : "(?:s|es)?";
+  return new RegExp(
+    `(?:^|\\s)${escapePattern(normalizedTerm)}${pluralSuffix}(?:\\s|$)`,
+  ).test(normalizedText);
+}
+
 function profileRules(products: string) {
   const normalized = normalizeBusinessText(products);
-  const detectedGroups = synonymGroups.filter(({ terms }) =>
-    terms.some((term) => normalized.includes(term)),
-  );
+  const detectedGroups = businessSectors.flatMap((sector) => {
+    const matchedTerms = sector.terms.filter((term) =>
+      matchesBusinessTerm(normalized, term),
+    );
+    if (!matchedTerms.length) return [];
+    return [
+      {
+        sector,
+        requiredWeakTerms: (sector.weakTerms ?? []).filter((term) =>
+          matchesBusinessTerm(normalized, term),
+        ),
+      },
+    ];
+  });
 
   if (detectedGroups.length) {
     return {
-      terms: [...new Set(detectedGroups.flatMap(({ terms }) => terms))],
-      excludes: [...new Set(detectedGroups.flatMap(({ excludes }) => excludes))],
+      groups: detectedGroups,
+      terms: [],
     };
   }
 
   return {
+    groups: [],
     terms: normalized
       .split(" ")
       .filter((term) => term.length >= 3 && !ignoredWords.has(term)),
-    excludes: [],
   };
 }
 
-export function describeProfileSector(products: string) {
+export function classifyBusinessProfile(products: string) {
   const normalized = normalizeBusinessText(products);
-  const detected = synonymGroups.find(({ terms }) =>
-    terms.some((term) => normalized.includes(term)),
-  );
-  return detected?.label ?? "Actividad específica";
+  return businessSectors
+    .filter(({ terms }) => terms.some((term) => matchesBusinessTerm(normalized, term)))
+    .map(({ label }) => label);
+}
+
+export function describeProfileSector(products: string) {
+  const labels = classifyBusinessProfile(products);
+  if (!labels.length) return "Actividad específica";
+  return labels.slice(0, 2).join(" + ");
 }
 
 export function rankOpportunities<T extends MatchableOpportunity>(
   products: string,
   opportunities: T[],
 ) {
-  const { terms, excludes } = profileRules(products);
-  if (!terms.length) return [];
+  const { groups, terms } = profileRules(products);
+  if (!groups.length && !terms.length) return [];
 
   return opportunities
     .map((opportunity) => {
@@ -148,14 +118,38 @@ export function rankOpportunities<T extends MatchableOpportunity>(
           opportunity.keywords.join(" "),
         ].join(" "),
       );
-      if (excludes.some((term) => searchable.includes(term))) {
-        return { opportunity, relevance: 0, matchCount: 0 };
+      const matches = new Set<string>();
+      for (const rule of groups) {
+        const group = rule.sector;
+        if (group.excludes.some((term) => matchesBusinessTerm(searchable, term))) {
+          continue;
+        }
+        const groupMatches = group.terms.filter((term) =>
+          matchesBusinessTerm(searchable, term),
+        );
+        const weakTerms = new Set(group.weakTerms ?? []);
+        if (
+          rule.requiredWeakTerms.length &&
+          !rule.requiredWeakTerms.some((term) =>
+            matchesBusinessTerm(searchable, term),
+          )
+        ) {
+          continue;
+        }
+        if (
+          groupMatches.length &&
+          (!weakTerms.size || groupMatches.some((term) => !weakTerms.has(term)))
+        ) {
+          groupMatches.forEach((term) => matches.add(term));
+        }
       }
-      const matches = terms.filter((term) => searchable.includes(term));
+      terms
+        .filter((term) => matchesBusinessTerm(searchable, term))
+        .forEach((term) => matches.add(term));
       return {
         opportunity,
-        relevance: matches.length * 100 + opportunity.score,
-        matchCount: matches.length,
+        relevance: matches.size * 100 + opportunity.score,
+        matchCount: matches.size,
       };
     })
     .filter(({ relevance }) => relevance >= 100)

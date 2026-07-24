@@ -63,3 +63,67 @@ test("reconoce sinónimos y acentos de climatización", () => {
 test("no rellena con sectores ajenos cuando no hay coincidencias", () => {
   assert.deepEqual(rankOpportunities("Fabricación de violines", samples), []);
 });
+
+test("una descripción demasiado general no mezcla mantenimientos", () => {
+  assert.deepEqual(rankOpportunities("Venta de equipos y mantenimiento general", samples), []);
+});
+
+test("seguridad electrónica no confunde seguridad ocupacional", () => {
+  const occupational = {
+    score: 91,
+    title: "Capacitación en seguridad ocupacional",
+    fit: "",
+    tags: ["Capacitación"],
+    keywords: ["salud laboral"],
+  };
+
+  assert.deepEqual(
+    rankOpportunities("Cámaras, alarmas y seguridad", [occupational]),
+    [],
+  );
+});
+
+test("motor no coincide dentro de la palabra promotor", () => {
+  const recreational = {
+    score: 90,
+    title: "Servicios de un promotor recreativo",
+    fit: "",
+    tags: ["Servicios"],
+    keywords: [],
+  };
+
+  assert.deepEqual(
+    rankOpportunities("Repuestos para vehículos y motores", [recreational]),
+    [],
+  );
+});
+
+test("repuesto genérico necesita una señal automotriz", () => {
+  const computerParts = {
+    score: 90,
+    title: "Repuestos para equipo de cómputo",
+    fit: "",
+    tags: ["Tecnología"],
+    keywords: [],
+  };
+  const vehicleParts = {
+    score: 90,
+    title: "Repuestos y llantas para vehículos institucionales",
+    fit: "",
+    tags: ["Automotriz"],
+    keywords: [],
+  };
+  const vehicleLegalService = {
+    score: 89,
+    title: "Servicios notariales para desinscripción de vehículos",
+    fit: "",
+    tags: ["Legal"],
+    keywords: [],
+  };
+
+  const matches = rankOpportunities(
+    "Repuestos para vehículos",
+    [computerParts, vehicleParts, vehicleLegalService],
+  );
+  assert.deepEqual(matches.map((item) => item.title), [vehicleParts.title]);
+});
