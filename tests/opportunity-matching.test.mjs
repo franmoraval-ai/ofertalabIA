@@ -28,6 +28,13 @@ const samples = [
     tags: ["Climatización"],
     keywords: ["hvac", "refrigeración"],
   },
+  {
+    score: 89,
+    title: "Sistemas de alimentación ininterrumpida UPS",
+    fit: "Respaldo eléctrico para equipos",
+    tags: ["Tecnología"],
+    keywords: ["alimentación eléctrica", "baterías"],
+  },
 ];
 
 test("un perfil de comida recibe alimentación y no seguridad", () => {
@@ -37,6 +44,13 @@ test("un perfil de comida recibe alimentación y no seguridad", () => {
   assert.match(matches[0].title, /alimentación/i);
   assert.doesNotMatch(matches[0].title, /cámaras|alarmas/i);
   assert.equal(describeProfileSector("comida y catering"), "Alimentos y alimentación");
+});
+
+test("alimentación eléctrica UPS no se confunde con comida", () => {
+  const matches = rankOpportunities("Comida, catering y alimentación", samples);
+
+  assert.equal(matches.length, 1);
+  assert.doesNotMatch(matches[0].title, /UPS/i);
 });
 
 test("reconoce sinónimos y acentos de climatización", () => {

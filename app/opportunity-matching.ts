@@ -22,6 +22,16 @@ const synonymGroups = [
       "fruta",
       "verdura",
     ],
+    excludes: [
+      "alimentacion ininterrumpida",
+      "sistema de alimentacion",
+      "fuente de alimentacion",
+      "alimentacion electrica",
+      "ups",
+      "alimento para animales",
+      "alimento animal",
+      "analisis microbiologico",
+    ],
   },
   {
     label: "Seguridad electrónica",
@@ -34,6 +44,7 @@ const synonymGroups = [
       "vigilancia",
       "proteccion",
     ],
+    excludes: [],
   },
   {
     label: "Climatización",
@@ -44,10 +55,12 @@ const synonymGroups = [
       "ventilacion",
       "hvac",
     ],
+    excludes: [],
   },
   {
     label: "Limpieza",
     terms: ["limpieza", "aseo", "desinfeccion", "higiene", "sanitizacion"],
+    excludes: [],
   },
   {
     label: "Tecnología",
@@ -59,6 +72,7 @@ const synonymGroups = [
       "servidor",
       "redes",
     ],
+    excludes: [],
   },
 ] as const;
 
@@ -88,19 +102,25 @@ export function normalizeBusinessText(value: string) {
     .trim();
 }
 
-function profileTerms(products: string) {
+function profileRules(products: string) {
   const normalized = normalizeBusinessText(products);
   const detectedGroups = synonymGroups.filter(({ terms }) =>
     terms.some((term) => normalized.includes(term)),
   );
 
   if (detectedGroups.length) {
-    return [...new Set(detectedGroups.flatMap(({ terms }) => terms))];
+    return {
+      terms: [...new Set(detectedGroups.flatMap(({ terms }) => terms))],
+      excludes: [...new Set(detectedGroups.flatMap(({ excludes }) => excludes))],
+    };
   }
 
-  return normalized
-    .split(" ")
-    .filter((term) => term.length >= 3 && !ignoredWords.has(term));
+  return {
+    terms: normalized
+      .split(" ")
+      .filter((term) => term.length >= 3 && !ignoredWords.has(term)),
+    excludes: [],
+  };
 }
 
 export function describeProfileSector(products: string) {
@@ -115,7 +135,7 @@ export function rankOpportunities<T extends MatchableOpportunity>(
   products: string,
   opportunities: T[],
 ) {
-  const terms = profileTerms(products);
+  const { terms, excludes } = profileRules(products);
   if (!terms.length) return [];
 
   return opportunities
@@ -128,13 +148,20 @@ export function rankOpportunities<T extends MatchableOpportunity>(
           opportunity.keywords.join(" "),
         ].join(" "),
       );
+      if (excludes.some((term) => searchable.includes(term))) {
+        return { opportunity, relevance: 0, matchCount: 0 };
+      }
       const matches = terms.filter((term) => searchable.includes(term));
       return {
         opportunity,
         relevance: matches.length * 100 + opportunity.score,
+        matchCount: matches.length,
       };
     })
     .filter(({ relevance }) => relevance >= 100)
     .sort((left, right) => right.relevance - left.relevance)
-    .map(({ opportunity }) => opportunity);
+    .map(({ opportunity, matchCount }) => ({
+      ...opportunity,
+      score: Math.min(98, 72 + matchCount * 6),
+    }));
 }

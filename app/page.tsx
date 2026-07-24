@@ -22,87 +22,65 @@ type Opportunity = {
   institution: string;
   title: string;
   closes: string;
+  openingDate: string;
   amount: string;
   fit: string;
   risk: string;
   tags: string[];
   keywords: string[];
+  sourceUrl: string;
 };
 
-const opportunities: Opportunity[] = [
-  {
-    id: "2026LD-000053-0058700001",
-    score: 94,
-    institution: "Consejo de Seguridad Vial",
-    title: "Mantenimiento preventivo de sistemas de videovigilancia",
-    closes: "Cierra en 5 días",
-    amount: "₡18,4 millones estimados",
-    fit: "Coincide con seguridad, cámaras y mantenimiento",
-    risk: "Falta confirmar experiencia mínima",
-    tags: ["Seguridad", "Mantenimiento", "Alta afinidad"],
-    keywords: ["seguridad", "cámaras", "videovigilancia", "monitoreo"],
-  },
-  {
-    id: "2026LE-000014-0001100001",
-    score: 87,
-    institution: "Universidad de Costa Rica",
-    title: "Suministro e instalación de equipos de aire acondicionado",
-    closes: "Cierra en 9 días",
-    amount: "₡32,1 millones estimados",
-    fit: "Coincide con instalación y climatización",
-    risk: "Requiere visita técnica",
-    tags: ["Climatización", "Instalación"],
-    keywords: ["aire acondicionado", "climatización", "refrigeración", "hvac"],
-  },
-  {
-    id: "2026LD-000089-0007300001",
-    score: 79,
-    institution: "Municipalidad de Heredia",
-    title: "Servicio de monitoreo y respuesta de alarmas",
-    closes: "Cierra en 12 días",
-    amount: "Monto por confirmar",
-    fit: "Coincide con monitoreo y respuesta",
-    risk: "Garantía de participación por revisar",
-    tags: ["Alarmas", "Servicio recurrente"],
-    keywords: ["seguridad", "alarmas", "monitoreo", "vigilancia"],
-  },
-  {
-    id: "DEMO-ALI-001",
-    score: 93,
-    institution: "Ministerio de Educación Pública",
-    title: "Servicio de alimentación para centros educativos",
-    closes: "Cierra en 6 días",
-    amount: "₡24,8 millones estimados",
-    fit: "Coincide con preparación y entrega de alimentos",
-    risk: "Requiere permiso sanitario y menú nutricional",
-    tags: ["Alimentación", "Entrega", "Alta afinidad"],
-    keywords: ["comida", "alimentos", "comedor", "cocina", "catering"],
-  },
-  {
-    id: "DEMO-ALI-002",
-    score: 88,
-    institution: "Caja Costarricense de Seguro Social",
-    title: "Suministro periódico de frutas, verduras y abarrotes",
-    closes: "Cierra en 10 días",
-    amount: "₡15,6 millones estimados",
-    fit: "Coincide con venta y distribución de alimentos",
-    risk: "Debe confirmar cadena de frío y capacidad de entrega",
-    tags: ["Víveres", "Distribución", "Alimentos"],
-    keywords: ["alimentos", "víveres", "abarrotes", "frutas", "verduras"],
-  },
-  {
-    id: "DEMO-ALI-003",
-    score: 84,
-    institution: "Universidad Nacional",
-    title: "Servicio de catering para actividades institucionales",
-    closes: "Cierra en 14 días",
-    amount: "Monto según demanda",
-    fit: "Coincide con catering y comida preparada",
-    risk: "Requiere cotización por tipo de evento",
-    tags: ["Catering", "Eventos", "Alimentación"],
-    keywords: ["catering", "comida", "restaurante", "alimentación", "cocina"],
-  },
-];
+type PublicOpportunity = {
+  procedure_no: string;
+  cartel_no: string;
+  title: string;
+  institution: string;
+  procedure_type: string;
+  status: string;
+  publication_date: string;
+  opening_date: string;
+  classification_code: string;
+  source_url: string;
+};
+
+type OpportunityFeed = {
+  generated_at: string;
+  source_updated_at: string;
+  count: number;
+  opportunities: PublicOpportunity[];
+};
+
+type FeedStatus = "loading" | "ready" | "error";
+
+function daysUntil(openingDate: string) {
+  const opening = new Date(`${openingDate}T12:00:00`);
+  const today = new Date();
+  today.setHours(12, 0, 0, 0);
+  return Math.max(0, Math.ceil((opening.getTime() - today.getTime()) / 86_400_000));
+}
+
+function clientOpportunity(item: PublicOpportunity): Opportunity {
+  const days = daysUntil(item.opening_date);
+  return {
+    id: item.procedure_no || item.cartel_no,
+    score: 70,
+    institution: item.institution,
+    title: item.title,
+    closes: days === 0 ? "Cierra hoy" : `Cierra en ${days} día${days === 1 ? "" : "s"}`,
+    openingDate: item.opening_date,
+    amount: "Consultar monto en SICOP",
+    fit: "Coincide con palabras de su actividad",
+    risk: "Confirme requisitos, vigencia y documentos oficiales",
+    tags: [item.procedure_type, item.status].filter(Boolean).slice(0, 2),
+    keywords: [
+      item.title,
+      item.classification_code,
+      item.procedure_type,
+    ].filter(Boolean),
+    sourceUrl: item.source_url,
+  };
+}
 
 const services: Record<
   ServiceKey,
@@ -496,9 +474,16 @@ function OpportunityCard({
           </p>
         </div>
       </div>
-      <button className="open-opportunity" onClick={() => onOpen(item)}>
-        Decidir cómo ofertar <span>→</span>
-      </button>
+      <div className="opportunity-actions">
+        {item.sourceUrl && (
+          <a href={item.sourceUrl} target="_blank" rel="noreferrer">
+            Ver ficha en SICOP <span>↗</span>
+          </a>
+        )}
+        <button className="open-opportunity" onClick={() => onOpen(item)}>
+          Decidir cómo ofertar <span>→</span>
+        </button>
+      </div>
     </article>
   );
 }
@@ -506,17 +491,26 @@ function OpportunityCard({
 function Dashboard({
   profile,
   onService,
+  opportunities,
+  feedStatus,
+  generatedAt,
 }: {
   profile: Profile;
   onService: (item: Opportunity) => void;
+  opportunities: Opportunity[];
+  feedStatus: FeedStatus;
+  generatedAt: string;
 }) {
   const matches = rankOpportunities(profile.products, opportunities);
-  const visibleOpportunities = matches.slice(0, 3);
+  const visibleOpportunities = matches.slice(0, 12);
   const sector = describeProfileSector(profile.products);
-  const urgent = visibleOpportunities.filter((item) => {
-    const days = Number(item.closes.match(/\d+/)?.[0] ?? 99);
-    return days <= 7;
-  }).length;
+  const urgent = matches.filter((item) => daysUntil(item.openingDate) <= 7).length;
+  const updatedLabel = generatedAt
+    ? new Intl.DateTimeFormat("es-CR", {
+        dateStyle: "medium",
+        timeStyle: "short",
+      }).format(new Date(generatedAt))
+    : "";
 
   return (
     <main className="dashboard">
@@ -548,8 +542,8 @@ function Dashboard({
         {[
           [
             "Recomendadas",
-            String(visibleOpportunities.length),
-            "Coincidencias verificables en esta demostración",
+            feedStatus === "loading" ? "…" : String(matches.length),
+            "Coincidencias dentro de oportunidades públicas vigentes",
           ],
           [
             "Cierran esta semana",
@@ -568,13 +562,33 @@ function Dashboard({
       <section>
         <div className="section-heading">
           <div>
-            <small>Selección inteligente</small>
-            <h2>Empiece por estas oportunidades</h2>
+            <small>Selección inteligente sobre datos públicos reales</small>
+            <h2>
+              {matches.length
+                ? `Las ${Math.min(matches.length, 12)} mejores coincidencias`
+                : "Resultado de la búsqueda"}
+            </h2>
           </div>
-          <button className="filter-button">Afinidad más alta⌄</button>
+          <span className="feed-updated">
+            {updatedLabel ? `Datos exportados: ${updatedLabel}` : "Consultando datos…"}
+          </span>
         </div>
         <div className="opportunity-list">
-          {visibleOpportunities.length ? (
+          {feedStatus === "loading" ? (
+            <article className="opportunity-card status-card">
+              <div className="opportunity-main">
+                <h3>Cargando oportunidades reales…</h3>
+                <p>Estamos leyendo la selección pública almacenada por OfertaLab IA.</p>
+              </div>
+            </article>
+          ) : feedStatus === "error" ? (
+            <article className="opportunity-card status-card">
+              <div className="opportunity-main">
+                <h3>No pudimos cargar los datos públicos</h3>
+                <p>Actualice la página. Su perfil permanece guardado en este dispositivo.</p>
+              </div>
+            </article>
+          ) : visibleOpportunities.length ? (
             visibleOpportunities.map((item) => (
               <OpportunityCard key={item.id} item={item} onOpen={onService} />
             ))
@@ -584,8 +598,8 @@ function Dashboard({
                 <h3>No mostraremos oportunidades de sectores diferentes</h3>
                 <p>
                   Amplíe la descripción de sus productos o servicios para buscar
-                  sinónimos más precisos. Por ejemplo: “comida preparada, catering y
-                  entrega de almuerzos”.
+                  sinónimos más precisos. No rellenaremos el resultado con sectores
+                  diferentes.
                 </p>
               </div>
             </article>
@@ -714,6 +728,9 @@ export default function Home() {
   const [profile, setProfile] = useState<Profile>(blankProfile);
   const [hasProfile, setHasProfile] = useState(false);
   const [selected, setSelected] = useState<Opportunity | null>(null);
+  const [opportunities, setOpportunities] = useState<Opportunity[]>([]);
+  const [feedStatus, setFeedStatus] = useState<FeedStatus>("loading");
+  const [generatedAt, setGeneratedAt] = useState("");
 
   useEffect(() => {
     const saved = window.localStorage.getItem("ofertalab-client-profile");
@@ -725,6 +742,27 @@ export default function Home() {
     } catch {
       window.localStorage.removeItem("ofertalab-client-profile");
     }
+  }, []);
+
+  useEffect(() => {
+    let active = true;
+    fetch("/data/opportunities.json", { cache: "no-store" })
+      .then((response) => {
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        return response.json() as Promise<OpportunityFeed>;
+      })
+      .then((feed) => {
+        if (!active || !Array.isArray(feed.opportunities)) return;
+        setOpportunities(feed.opportunities.map(clientOpportunity));
+        setGeneratedAt(feed.generated_at);
+        setFeedStatus("ready");
+      })
+      .catch(() => {
+        if (active) setFeedStatus("error");
+      });
+    return () => {
+      active = false;
+    };
   }, []);
 
   function saveProfile(next: Profile) {
@@ -754,7 +792,15 @@ export default function Home() {
         <Welcome onStart={() => setView("registro")} onDemo={demo} />
       )}
       {view === "registro" && <Registration initial={profile} onSave={saveProfile} />}
-      {view === "oportunidades" && <Dashboard profile={profile} onService={setSelected} />}
+      {view === "oportunidades" && (
+        <Dashboard
+          profile={profile}
+          onService={setSelected}
+          opportunities={opportunities}
+          feedStatus={feedStatus}
+          generatedAt={generatedAt}
+        />
+      )}
       {view === "empresa" && <Business profile={profile} />}
       <footer>
         <Brand />
