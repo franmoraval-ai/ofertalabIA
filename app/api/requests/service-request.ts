@@ -1,4 +1,4 @@
-export const SERVICE_KEYS = ["autogestion", "asistida", "integral"] as const;
+export const SERVICE_KEYS = ["autogestion", "asistida", "integral", "seguimiento"] as const;
 
 export type ServiceKey = (typeof SERVICE_KEYS)[number];
 
@@ -86,7 +86,7 @@ export function validateServiceRequest(payload: unknown): ValidatedServiceReques
     company_products: companyProducts,
     company_summary: companySummary,
     contact_info: contactInfo,
-    status: "Solicitada",
+    status: service === "seguimiento" ? "En seguimiento" : "Solicitada",
     created_at: new Date().toISOString(),
   };
 }

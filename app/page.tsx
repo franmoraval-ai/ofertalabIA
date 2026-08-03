@@ -11,6 +11,7 @@ import {
 
 type View = "inicio" | "registro" | "oportunidades" | "empresa" | "solicitudes";
 type ServiceKey = "autogestion" | "asistida" | "integral";
+type RequestKind = ServiceKey | "seguimiento";
 type Profile = {
   id: string;
   name: string;
@@ -29,7 +30,7 @@ type ServiceRequest = {
   opportunityId: string;
   opportunityTitle: string;
   institution: string;
-  service: ServiceKey;
+  service: RequestKind;
   serviceTitle: string;
   status: string;
   createdAt: string;
@@ -541,9 +542,13 @@ function Registration({
 function OpportunityCard({
   item,
   onOpen,
+  onFollow,
+  followed,
 }: {
   item: Opportunity;
   onOpen: (item: Opportunity) => void;
+  onFollow: (item: Opportunity) => void;
+  followed: boolean;
 }) {
   return (
     <article className="opportunity-card">
@@ -598,6 +603,13 @@ function OpportunityCard({
         <button className="open-opportunity" onClick={() => onOpen(item)}>
           Decidir cómo ofertar <span>→</span>
         </button>
+        <button
+          className="secondary"
+          onClick={() => onFollow(item)}
+          disabled={followed}
+        >
+          {followed ? "En seguimiento ✓" : "Seguir para analizar"}
+        </button>
       </div>
     </article>
   );
@@ -610,6 +622,8 @@ function Dashboard({
   opportunities,
   feedStatus,
   generatedAt,
+  requests,
+  onFollow,
 }: {
   profile: Profile;
   onService: (item: Opportunity) => void;
@@ -617,12 +631,22 @@ function Dashboard({
   opportunities: Opportunity[];
   feedStatus: FeedStatus;
   generatedAt: string;
+  requests: ServiceRequest[];
+  onFollow: (item: Opportunity) => void;
 }) {
   const matches = rankOpportunities(profile.products, opportunities);
   const preparedMatches = matches.filter((item) =>
     hasClientPreparationWindow(item.openingDate),
   );
   const visibleOpportunities = preparedMatches.slice(0, 12);
+  const urgentMatches = matches
+    .filter((item) => !hasClientPreparationWindow(item.openingDate))
+    .slice(0, 6);
+  const followedIds = new Set(
+    requests
+      .filter((request) => request.service === "seguimiento")
+      .map((request) => request.opportunityId),
+  );
   const sector = describeProfileSector(profile.products);
   const completion = profileCompletion(profile);
   const updatedLabel = generatedAt
@@ -670,6 +694,11 @@ function Dashboard({
             `${CLIENT_PREPARATION_DAYS} días`,
             "Priorizamos ofertas con tiempo real para participar",
           ],
+          [
+            "Cierre próximo",
+            String(urgentMatches.length),
+            "También puede seguirlas y analizarlas si ya está preparado",
+          ],
           ["Sector detectado", sector, `Según: ${profile.products}`],
         ].map(([label, value, detail]) => (
           <div key={label}>
@@ -710,7 +739,13 @@ function Dashboard({
             </article>
           ) : visibleOpportunities.length ? (
             visibleOpportunities.map((item) => (
-              <OpportunityCard key={item.id} item={item} onOpen={onService} />
+              <OpportunityCard
+                key={item.id}
+                item={item}
+                onOpen={onService}
+                onFollow={onFollow}
+                followed={followedIds.has(item.id)}
+              />
             ))
           ) : (
             <article className="opportunity-card">
@@ -730,6 +765,30 @@ function Dashboard({
           )}
         </div>
       </section>
+      {feedStatus === "ready" && urgentMatches.length > 0 && (
+        <section>
+          <div className="section-heading">
+            <div>
+              <small>Opciones con cierre próximo</small>
+              <h2>También puede revisar estas oportunidades urgentes</h2>
+            </div>
+            <span className="feed-updated">
+              Úselas si ya cuenta con documentos y capacidad para responder pronto.
+            </span>
+          </div>
+          <div className="opportunity-list">
+            {urgentMatches.map((item) => (
+              <OpportunityCard
+                key={item.id}
+                item={item}
+                onOpen={onService}
+                onFollow={onFollow}
+                followed={followedIds.has(item.id)}
+              />
+            ))}
+          </div>
+        </section>
+      )}
     </main>
   );
 }
@@ -898,8 +957,8 @@ function Requests({
   return (
     <main className="requests-page">
       <section className="requests-header">
-        <span className="eyebrow">Mis solicitudes</span>
-        <h1>Seguimiento de sus servicios</h1>
+        <span className="eyebrow">Mis seguimientos y solicitudes</span>
+        <h1>Oportunidades que está revisando</h1>
         <p>
           Aquí verá el estado de cada acompañamiento que solicitó. El equipo acuerda
           el precio con usted; siempre aprueba y firma. Este prototipo no procesa
@@ -922,17 +981,24 @@ function Requests({
                   </div>
                   <span className="request-status">{request.status}</span>
                 </div>
-                <ol className="request-timeline" aria-label="Etapas del servicio">
-                  {REQUEST_STAGES.map((stage, index) => (
-                    <li
-                      key={stage}
-                      className={index <= currentStep ? "done" : ""}
-                    >
-                      <span className="dot" />
-                      {stage}
-                    </li>
-                  ))}
-                </ol>
+                {request.service === "seguimiento" ? (
+                  <p>
+                    La guardó para analizarla. Revise la ficha oficial y, cuando esté
+                    listo, elija cómo quiere ofertar.
+                  </p>
+                ) : (
+                  <ol className="request-timeline" aria-label="Etapas del servicio">
+                    {REQUEST_STAGES.map((stage, index) => (
+                      <li
+                        key={stage}
+                        className={index <= currentStep ? "done" : ""}
+                      >
+                        <span className="dot" />
+                        {stage}
+                      </li>
+                    ))}
+                  </ol>
+                )}
                 <div className="request-card-footer">
                   <small>
                     Solicitada:{" "}
@@ -1128,6 +1194,43 @@ export default function Home() {
     });
   }
 
+  function followOpportunity(opportunity: Opportunity) {
+    const id = `${opportunity.id}::seguimiento`;
+    const entry: ServiceRequest = {
+      id,
+      opportunityId: opportunity.id,
+      opportunityTitle: opportunity.title,
+      institution: opportunity.institution,
+      service: "seguimiento",
+      serviceTitle: "Quiero analizarla primero",
+      status: "En seguimiento",
+      createdAt: new Date().toISOString(),
+    };
+    persistRequests([entry, ...requests.filter((item) => item.id !== id)]);
+    void fetch("/api/requests", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        opportunity_id: opportunity.id,
+        opportunity_title: opportunity.title,
+        institution: opportunity.institution,
+        service: "seguimiento",
+        company_name: profile.name,
+        contact_name: profile.contact || profile.name,
+        contact_email: profile.email,
+        contact_phone: profile.phone,
+        company_website: profile.website,
+        company_province: profile.province,
+        company_experience: profile.experience,
+        company_capacity: profile.capacity,
+        company_products: profile.products,
+        company_summary: profile.summary,
+      }),
+    }).catch(() => {
+      /* El seguimiento queda guardado localmente aunque el servidor no responda. */
+    });
+  }
+
   function cancelRequest(id: string) {
     persistRequests(requests.filter((item) => item.id !== id));
   }
@@ -1166,9 +1269,11 @@ export default function Home() {
           profile={profile}
           onService={setSelected}
           onOpenProfile={() => setView("empresa")}
-          opportunities={opportunities}
-          feedStatus={feedStatus}
-          generatedAt={generatedAt}
+            opportunities={opportunities}
+            feedStatus={feedStatus}
+            generatedAt={generatedAt}
+            requests={requests}
+            onFollow={followOpportunity}
         />
       )}
       {view === "empresa" && (

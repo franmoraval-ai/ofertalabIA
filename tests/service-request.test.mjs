@@ -38,6 +38,20 @@ test("rechaza un servicio desconocido", () => {
   );
 });
 
+test("registra seguimiento sin convertirlo en una solicitud de servicio", () => {
+  const result = validateServiceRequest({
+    opportunity_id: "2026LY-000010",
+    opportunity_title: "Compra de equipos",
+    service: "seguimiento",
+    company_name: "Empresa",
+    contact_name: "Marco",
+    contact_email: "marco@example.com",
+    company_products: "Venta de equipos",
+  });
+  assert.equal(result.id, "2026LY-000010::seguimiento");
+  assert.equal(result.status, "En seguimiento");
+});
+
 test("rechaza cuando faltan datos obligatorios", () => {
   assert.throws(() =>
     validateServiceRequest({ service: "autogestion", contact_email: "marco@example.com" }),
