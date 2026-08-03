@@ -9,12 +9,17 @@ import {
 type View = "inicio" | "registro" | "oportunidades" | "empresa" | "solicitudes";
 type ServiceKey = "autogestion" | "asistida" | "integral";
 type Profile = {
+  id: string;
   name: string;
   contact: string;
+  email: string;
+  phone: string;
   products: string;
   province: string;
   experience: string;
   capacity: string;
+  website: string;
+  summary: string;
 };
 type ServiceRequest = {
   id: string;
@@ -137,12 +142,17 @@ const services: Record<
 };
 
 const blankProfile: Profile = {
+  id: "",
   name: "",
   contact: "",
+  email: "",
+  phone: "",
   products: "",
   province: "San José",
   experience: "Nunca he ofertado",
   capacity: "Hasta ₡10 millones",
+  website: "",
+  summary: "",
 };
 
 const REQUEST_STAGES = [
@@ -151,6 +161,47 @@ const REQUEST_STAGES = [
   "Propuesta enviada",
   "Aprobada y firmada por usted",
 ] as const;
+
+function normalizeProfile(value: Partial<Profile> | null | undefined): Profile {
+  return {
+    ...blankProfile,
+    ...(value ?? {}),
+  };
+}
+
+function ensureProfileId(profile: Profile): Profile {
+  if (profile.id) return profile;
+  return {
+    ...profile,
+    id: crypto.randomUUID(),
+  };
+}
+
+function isProfileReady(profile: Profile) {
+  return Boolean(
+    profile.name.trim() &&
+      profile.contact.trim() &&
+      profile.email.trim() &&
+      profile.products.trim(),
+  );
+}
+
+function profileCompletion(profile: Profile) {
+  const values = [
+    profile.name,
+    profile.contact,
+    profile.email,
+    profile.phone,
+    profile.products,
+    profile.province,
+    profile.experience,
+    profile.capacity,
+    profile.website,
+    profile.summary,
+  ];
+  const completed = values.filter((value) => value.trim()).length;
+  return Math.round((completed / values.length) * 100);
+}
 
 function Brand() {
   return (
@@ -382,6 +433,35 @@ function Registration({
               />
             </label>
             <label>
+              Correo electrónico
+              <input
+                required
+                type="email"
+                value={profile.email}
+                onChange={(event) => update("email", event.target.value)}
+                placeholder="nombre@empresa.com"
+              />
+            </label>
+            <label>
+              Teléfono o WhatsApp
+              <input
+                value={profile.phone}
+                onChange={(event) => update("phone", event.target.value)}
+                placeholder="Ej. +506 8888 7777"
+              />
+            </label>
+            <label>
+              Sitio web o red principal
+              <input
+                value={profile.website}
+                onChange={(event) => update("website", event.target.value)}
+                placeholder="https://suempresa.com"
+              />
+            </label>
+          </>
+        ) : (
+          <>
+            <label>
               ¿Qué productos o servicios vende?
               <textarea
                 required
@@ -391,9 +471,6 @@ function Registration({
               />
               <small>Escriba con sus propias palabras. Nosotros lo organizamos.</small>
             </label>
-          </>
-        ) : (
-          <>
             <label>
               Provincia principal
               <select
@@ -436,6 +513,17 @@ function Registration({
                 <option>De ₡50 a ₡250 millones</option>
                 <option>Más de ₡250 millones</option>
               </select>
+            </label>
+            <label>
+              Cuéntenos más sobre su empresa
+              <textarea
+                value={profile.summary}
+                onChange={(event) => update("summary", event.target.value)}
+                placeholder="Ej. Tenemos cobertura nacional, cuadrillas propias o experiencia con instituciones públicas."
+              />
+              <small>
+                Este resumen ayuda al equipo a entender mejor a quién estamos atendiendo.
+              </small>
             </label>
           </>
         )}
@@ -522,12 +610,14 @@ function OpportunityCard({
 function Dashboard({
   profile,
   onService,
+  onOpenProfile,
   opportunities,
   feedStatus,
   generatedAt,
 }: {
   profile: Profile;
   onService: (item: Opportunity) => void;
+  onOpenProfile: () => void;
   opportunities: Opportunity[];
   feedStatus: FeedStatus;
   generatedAt: string;
@@ -536,6 +626,7 @@ function Dashboard({
   const visibleOpportunities = matches.slice(0, 12);
   const sector = describeProfileSector(profile.products);
   const urgent = matches.filter((item) => daysUntil(item.openingDate) <= 7).length;
+  const completion = profileCompletion(profile);
   const updatedLabel = generatedAt
     ? new Intl.DateTimeFormat("es-CR", {
         dateStyle: "medium",
@@ -563,10 +654,10 @@ function Dashboard({
         </div>
         <div className="profile-health">
           <div>
-            <strong>72%</strong>
+            <strong>{completion}%</strong>
             <span>Perfil completo</span>
           </div>
-          <button>Completar documentos</button>
+          <button onClick={onOpenProfile}>Ver o completar perfil</button>
         </div>
       </section>
       <section className="dashboard-stats">
@@ -641,35 +732,57 @@ function Dashboard({
   );
 }
 
-function Business({ profile }: { profile: Profile }) {
+function Business({
+  profile,
+  onEdit,
+  onDelete,
+}: {
+  profile: Profile;
+  onEdit: () => void;
+  onDelete: () => void;
+}) {
+  const completion = profileCompletion(profile);
+
   return (
     <main className="business-page">
       <section className="business-header">
         <span className="eyebrow">Mi empresa</span>
         <h1>{profile.name || "Empresa de demostración"}</h1>
         <p>Este perfil determina qué oportunidades recomendamos y cuáles descartamos.</p>
+        <div className="business-actions">
+          <button className="primary" onClick={onEdit}>
+            Editar perfil
+          </button>
+          <button className="secondary danger-button" onClick={onDelete}>
+            Eliminar perfil de este dispositivo
+          </button>
+        </div>
       </section>
       <section className="business-grid">
         <div className="business-card primary-card">
           <small>Qué vende</small>
           <h2>{profile.products || "Seguridad, cámaras, alarmas y mantenimiento"}</h2>
-          <button>Editar productos y servicios</button>
+          <p>
+            {profile.summary || "Agregue un resumen corto para darle más contexto al equipo."}
+          </p>
         </div>
         <div className="business-card">
-          <small>Capacidad actual</small>
-          <h3>{profile.capacity}</h3>
-          <p>Provincia: {profile.province}</p>
+          <small>Contacto principal</small>
+          <h3>{profile.contact || "Sin nombre de contacto"}</h3>
+          <p>{profile.email || "Agregue un correo electrónico"}</p>
+          <p>{profile.phone || "Agregue teléfono o WhatsApp"}</p>
         </div>
         <div className="business-card warning-card">
-          <small>Documentos</small>
-          <h3>3 de 8 registrados</h3>
-          <p>Complete sus documentos para acelerar futuras ofertas.</p>
-          <button>Revisar documentos</button>
+          <small>Perfil listo para atención</small>
+          <h3>{completion}% completo</h3>
+          <p>Mientras más completo esté, mejor podremos ubicar y atender a su empresa.</p>
         </div>
         <div className="business-card">
-          <small>Experiencia</small>
-          <h3>{profile.experience}</h3>
-          <p>OfertaLab adaptará las explicaciones a su experiencia.</p>
+          <small>Capacidad y contexto</small>
+          <h3>{profile.capacity}</h3>
+          <p>Provincia: {profile.province}</p>
+          <p>{profile.experience}</p>
+          <p>{profile.website || "Sin sitio web registrado"}</p>
         </div>
       </section>
     </main>
@@ -867,9 +980,10 @@ export default function Home() {
     const saved = window.localStorage.getItem("ofertalab-client-profile");
     if (!saved) return;
     try {
-      setProfile(JSON.parse(saved));
-      setHasProfile(true);
-      setView("oportunidades");
+      const loaded = normalizeProfile(JSON.parse(saved));
+      setProfile(loaded);
+      setHasProfile(isProfileReady(loaded));
+      setView(isProfileReady(loaded) ? "oportunidades" : "registro");
     } catch {
       window.localStorage.removeItem("ofertalab-client-profile");
     }
@@ -915,10 +1029,56 @@ export default function Home() {
   }, []);
 
   function saveProfile(next: Profile) {
-    setProfile(next);
-    setHasProfile(true);
-    window.localStorage.setItem("ofertalab-client-profile", JSON.stringify(next));
+    const normalized = ensureProfileId(normalizeProfile(next));
+    setProfile(normalized);
+    setHasProfile(isProfileReady(normalized));
+    window.localStorage.setItem("ofertalab-client-profile", JSON.stringify(normalized));
+    void fetch("/api/profiles", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        id: normalized.id,
+        company_name: normalized.name,
+        contact_name: normalized.contact,
+        contact_email: normalized.email,
+        contact_phone: normalized.phone,
+        company_website: normalized.website,
+        company_province: normalized.province,
+        company_experience: normalized.experience,
+        company_capacity: normalized.capacity,
+        company_products: normalized.products,
+        company_summary: normalized.summary,
+      }),
+    }).catch(() => {
+      /* El perfil sigue guardado localmente aunque el envío falle. */
+    });
     setView("oportunidades");
+  }
+
+  function editProfile() {
+    setView("registro");
+  }
+
+  function deleteProfile() {
+    const profileId = profile.id;
+    if (!window.confirm("Se eliminará el perfil guardado en este dispositivo.")) {
+      return;
+    }
+    window.localStorage.removeItem("ofertalab-client-profile");
+    window.localStorage.removeItem("ofertalab-client-requests");
+    setProfile(blankProfile);
+    setRequests([]);
+    setSelected(null);
+    setHasProfile(false);
+    setView("inicio");
+    if (!profileId) return;
+    void fetch("/api/profiles", {
+      method: "DELETE",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ id: profileId }),
+    }).catch(() => {
+      /* El perfil local ya fue eliminado aunque el servidor no responda. */
+    });
   }
 
   function persistRequests(next: ServiceRequest[]) {
@@ -950,7 +1110,16 @@ export default function Home() {
         opportunity_title: opportunity.title,
         institution: opportunity.institution,
         service,
+        company_name: profile.name,
         contact_name: profile.contact || profile.name,
+        contact_email: profile.email,
+        contact_phone: profile.phone,
+        company_website: profile.website,
+        company_province: profile.province,
+        company_experience: profile.experience,
+        company_capacity: profile.capacity,
+        company_products: profile.products,
+        company_summary: profile.summary,
       }),
     }).catch(() => {
       /* La solicitud queda guardada localmente aunque el envío falle. */
@@ -962,15 +1131,24 @@ export default function Home() {
   }
 
   function demo() {
-    if (!hasProfile)
-      setProfile({
+    if (!hasProfile) {
+      const sample = ensureProfileId({
+        id: "",
         name: "Seguridad Integral S.A.",
         contact: "Marco",
+        email: "marco@seguridadintegral.cr",
+        phone: "+506 8888 7777",
         products: "Cámaras, alarmas, monitoreo, instalación y mantenimiento",
         province: "San José",
         experience: "Nunca he ofertado",
         capacity: "De ₡10 a ₡50 millones",
+        website: "https://seguridadintegral.cr",
+        summary:
+          "Empresa con instalación y monitoreo para clientes institucionales en la GAM.",
       });
+      setProfile(sample);
+      setHasProfile(true);
+    }
     setView("oportunidades");
   }
 
@@ -985,12 +1163,15 @@ export default function Home() {
         <Dashboard
           profile={profile}
           onService={setSelected}
+          onOpenProfile={() => setView("empresa")}
           opportunities={opportunities}
           feedStatus={feedStatus}
           generatedAt={generatedAt}
         />
       )}
-      {view === "empresa" && <Business profile={profile} />}
+      {view === "empresa" && (
+        <Business profile={profile} onEdit={editProfile} onDelete={deleteProfile} />
+      )}
       {view === "solicitudes" && (
         <Requests
           requests={requests}

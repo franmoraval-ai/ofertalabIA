@@ -28,4 +28,6 @@ test("includes the three service choices in the client experience", async () => 
   assert.match(html, /Prepárenme la oferta/);
   assert.match(html, /Encárguense de todo/);
   assert.match(html, /Nunca le pediremos contraseñas/);
+  assert.match(html, /Correo electrónico/);
+  assert.match(html, /Eliminar perfil de este dispositivo/);
 });

@@ -1,15 +1,23 @@
 import type { Metadata } from "next";
 import "./globals.css";
 
+const publicSiteUrl = process.env.NEXT_PUBLIC_SITE_URL?.trim() || "https://ofertalabcr.com";
+const metadataBase = new URL(publicSiteUrl);
+
 export const metadata: Metadata = {
+  metadataBase,
   title: "OfertaLab IA Clientes",
   description:
     "Oportunidades públicas claras, ofertas profesionales y acompañamiento para ayudar a su empresa a competir.",
+  alternates: {
+    canonical: "/",
+  },
   openGraph: {
     title: "OfertaLab IA",
     description: "Su empresa también puede venderle al Estado.",
     locale: "es_CR",
     type: "website",
+    url: "/",
     images: [
       {
         url: "/ofertalab-social-card.png",

@@ -44,3 +44,4 @@ tsconfig.tsbuildinfo
 /.wrangler/
 /outputs/
 /work/
+.env*.local
