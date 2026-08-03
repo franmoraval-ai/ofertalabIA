@@ -2,7 +2,10 @@
 
 import { FormEvent, useEffect, useState } from "react";
 import {
+  CLIENT_PREPARATION_DAYS,
   describeProfileSector,
+  daysUntilClosing,
+  hasClientPreparationWindow,
   rankOpportunities,
 } from "./opportunity-matching";
 
@@ -69,15 +72,8 @@ type OpportunityFeed = {
 
 type FeedStatus = "loading" | "ready" | "error";
 
-function daysUntil(openingDate: string) {
-  const opening = new Date(`${openingDate}T12:00:00`);
-  const today = new Date();
-  today.setHours(12, 0, 0, 0);
-  return Math.max(0, Math.ceil((opening.getTime() - today.getTime()) / 86_400_000));
-}
-
 function clientOpportunity(item: PublicOpportunity): Opportunity {
-  const days = daysUntil(item.opening_date);
+  const days = daysUntilClosing(item.opening_date);
   return {
     id: item.procedure_no || item.cartel_no,
     score: 70,
@@ -623,9 +619,11 @@ function Dashboard({
   generatedAt: string;
 }) {
   const matches = rankOpportunities(profile.products, opportunities);
-  const visibleOpportunities = matches.slice(0, 12);
+  const preparedMatches = matches.filter((item) =>
+    hasClientPreparationWindow(item.openingDate),
+  );
+  const visibleOpportunities = preparedMatches.slice(0, 12);
   const sector = describeProfileSector(profile.products);
-  const urgent = matches.filter((item) => daysUntil(item.openingDate) <= 7).length;
   const completion = profileCompletion(profile);
   const updatedLabel = generatedAt
     ? new Intl.DateTimeFormat("es-CR", {
@@ -643,8 +641,8 @@ function Dashboard({
             Hola, {profile.contact || "Marco"}.
             <span>
               {visibleOpportunities.length
-                ? " Encontramos opciones relacionadas con lo que vende."
-                : " Todavía no encontramos una coincidencia segura."}
+                ? " Encontramos opciones relacionadas con lo que vende y tiempo para prepararlas."
+                : " Estamos buscando una oportunidad que pueda preparar con calma."}
             </span>
           </h1>
           <p>
@@ -664,13 +662,13 @@ function Dashboard({
         {[
           [
             "Recomendadas",
-            feedStatus === "loading" ? "…" : String(matches.length),
-            "Coincidencias dentro de oportunidades públicas vigentes",
+            feedStatus === "loading" ? "…" : String(preparedMatches.length),
+            `Coincidencias con al menos ${CLIENT_PREPARATION_DAYS} días para prepararse`,
           ],
           [
-            "Cierran esta semana",
-            String(urgent),
-            urgent ? "Conviene revisarlas primero" : "Sin urgencias detectadas",
+            "Plazo mínimo",
+            `${CLIENT_PREPARATION_DAYS} días`,
+            "Priorizamos ofertas con tiempo real para participar",
           ],
           ["Sector detectado", sector, `Según: ${profile.products}`],
         ].map(([label, value, detail]) => (
@@ -687,7 +685,7 @@ function Dashboard({
             <small>Selección inteligente sobre datos públicos reales</small>
             <h2>
               {matches.length
-                ? `Las ${Math.min(matches.length, 12)} mejores coincidencias`
+                ? `Las ${Math.min(preparedMatches.length, 12)} mejores coincidencias con tiempo para prepararse`
                 : "Resultado de la búsqueda"}
             </h2>
           </div>
@@ -717,11 +715,15 @@ function Dashboard({
           ) : (
             <article className="opportunity-card">
               <div className="opportunity-main">
-                <h3>No mostraremos oportunidades de sectores diferentes</h3>
+                <h3>
+                  {matches.length
+                    ? "Aún no hay una coincidencia con tiempo suficiente"
+                    : "No mostraremos oportunidades de sectores diferentes"}
+                </h3>
                 <p>
-                  Amplíe la descripción de sus productos o servicios para buscar
-                  sinónimos más precisos. No rellenaremos el resultado con sectores
-                  diferentes.
+                  {matches.length
+                    ? `Las coincidencias actuales cierran antes de ${CLIENT_PREPARATION_DAYS} días. Volveremos a priorizar opciones con más tiempo para que pueda preparar una oferta sólida.`
+                    : "Amplíe la descripción de sus productos o servicios para buscar sinónimos más precisos. No rellenaremos el resultado con sectores diferentes."}
                 </p>
               </div>
             </article>

@@ -9,6 +9,22 @@ export type MatchableOpportunity = {
   matchedTerms?: string[];
 };
 
+export const CLIENT_PREPARATION_DAYS = 15;
+
+export function daysUntilClosing(openingDate: string, now = new Date()) {
+  const closing = new Date(`${openingDate}T12:00:00`);
+  const today = new Date(now);
+  today.setHours(12, 0, 0, 0);
+  return Math.max(0, Math.ceil((closing.getTime() - today.getTime()) / 86_400_000));
+}
+
+export function hasClientPreparationWindow(
+  openingDate: string,
+  now = new Date(),
+) {
+  return daysUntilClosing(openingDate, now) >= CLIENT_PREPARATION_DAYS;
+}
+
 const ignoredWords = new Set([
   "con",
   "del",

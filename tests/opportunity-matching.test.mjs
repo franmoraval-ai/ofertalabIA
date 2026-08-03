@@ -2,7 +2,10 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import {
+  CLIENT_PREPARATION_DAYS,
   describeProfileSector,
+  daysUntilClosing,
+  hasClientPreparationWindow,
   rankOpportunities,
 } from "../app/opportunity-matching.ts";
 
@@ -36,6 +39,16 @@ const samples = [
     keywords: ["alimentación eléctrica", "baterías"],
   },
 ];
+
+test("prioriza oportunidades con al menos quince días de preparación", () => {
+  const today = new Date("2026-08-03T12:00:00");
+
+  assert.equal(CLIENT_PREPARATION_DAYS, 15);
+  assert.equal(daysUntilClosing("2026-08-17", today), 14);
+  assert.equal(hasClientPreparationWindow("2026-08-17", today), false);
+  assert.equal(daysUntilClosing("2026-08-18", today), 15);
+  assert.equal(hasClientPreparationWindow("2026-08-18", today), true);
+});
 
 test("un perfil de comida recibe alimentación y no seguridad", () => {
   const matches = rankOpportunities("Venta de comida preparada", samples);
