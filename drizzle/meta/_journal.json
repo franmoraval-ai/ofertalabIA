@@ -15,6 +15,34 @@
       "when": 1785776925447,
       "tag": "0001_flat_sunfire",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1785794640872,
+      "tag": "0002_flippant_the_order",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1785795052558,
+      "tag": "0003_opposite_firebrand",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1785795113227,
+      "tag": "0004_strange_lord_tyger",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1785796281636,
+      "tag": "0005_mysterious_scream",
+      "breakpoints": true
     }
   ]
 }

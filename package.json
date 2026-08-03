@@ -9,12 +9,14 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "test": "node --test tests/business-taxonomy.test.mjs tests/opportunity-feed.test.mjs tests/opportunity-matching.test.mjs tests/rendered-html.test.mjs tests/service-request.test.mjs tests/profile-record.test.mjs",
+    "test": "node --test tests/business-taxonomy.test.mjs tests/opportunity-feed.test.mjs tests/opportunity-matching.test.mjs tests/rendered-html.test.mjs tests/service-request.test.mjs tests/profile-record.test.mjs tests/legal-workbench.test.mjs",
     "lint": "eslint . --ignore-pattern dist --ignore-pattern .next",
     "db:generate": "drizzle-kit generate",
-    "db:migrate": "drizzle-kit migrate"
+    "db:migrate": "drizzle-kit migrate",
+    "legal:preflight": "node scripts/legal-preflight.mjs"
   },
   "dependencies": {
+    "jose": "6.1.0",
     "@supabase/supabase-js": "2.58.0",
     "drizzle-orm": "0.45.2",
     "next": "16.2.6",

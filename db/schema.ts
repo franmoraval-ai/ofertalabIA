@@ -56,3 +56,42 @@ export const serviceRequests = pgTable("service_requests", {
   status: text("status").notNull().default("Solicitada"),
   createdAt: text("created_at").notNull(),
 });
+
+export const legalCases = pgTable("legal_cases", {
+  caseKey: text("case_key").primaryKey(),
+  companyName: text("company_name").notNull().default(""),
+  contactEmail: text("contact_email").notNull().default(""),
+  followUpStatus: text("follow_up_status").notNull().default("Sin estado"),
+  assignedTo: text("assigned_to").notNull().default(""),
+  assignedTeam: text("assigned_team").notNull().default("Legal"),
+  note: text("note").notNull().default(""),
+  priorityLabel: text("priority_label").notNull().default(""),
+  nextStep: text("next_step").notNull().default(""),
+  targetDate: text("target_date").notNull().default(""),
+  updatedBy: text("updated_by").notNull().default(""),
+  updatedAt: text("updated_at").notNull(),
+});
+
+export const legalCaseEvents = pgTable("legal_case_events", {
+  id: text("id").primaryKey(),
+  caseKey: text("case_key").notNull(),
+  eventType: text("event_type").notNull().default("updated"),
+  actorEmail: text("actor_email").notNull().default(""),
+  summary: text("summary").notNull().default(""),
+  note: text("note").notNull().default(""),
+  followUpStatus: text("follow_up_status").notNull().default("Sin estado"),
+  assignedTo: text("assigned_to").notNull().default(""),
+  nextStep: text("next_step").notNull().default(""),
+  targetDate: text("target_date").notNull().default(""),
+  createdAt: text("created_at").notNull(),
+});
+
+export const legalStaff = pgTable("legal_staff", {
+  email: text("email").primaryKey(),
+  fullName: text("full_name").notNull().default(""),
+  team: text("team").notNull().default("Legal"),
+  role: text("role").notNull().default("member"),
+  active: text("active").notNull().default("true"),
+  createdAt: text("created_at").notNull(),
+  updatedAt: text("updated_at").notNull(),
+});
