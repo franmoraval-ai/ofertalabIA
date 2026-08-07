@@ -2,7 +2,7 @@ import { NextResponse, type NextRequest } from "next/server";
 
 import { authenticateLegalRequest } from "@/lib/legal-auth";
 
-const PUBLIC_LEGAL_PATHS = new Set(["/legal/login"]);
+const PUBLIC_LEGAL_PATHS = new Set(["/legal/login", "/legal/activate"]);
 
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;

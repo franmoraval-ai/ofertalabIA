@@ -67,6 +67,7 @@ export async function POST(request: Request) {
     const supabase = supabaseAdminClient();
     const { data, error } = await supabase.auth.admin.inviteUserByEmail(member.email, {
       data: { full_name: member.full_name },
+      redirectTo: new URL("/legal/activate", request.url).toString(),
     });
     if (error) {
       throw new Error(error.message);
