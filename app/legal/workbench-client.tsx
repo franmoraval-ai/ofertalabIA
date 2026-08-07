@@ -22,6 +22,12 @@ type LegalCase = {
   latest_opportunity_id: string;
   latest_opportunity_title: string;
   latest_institution: string;
+  procurement_type: string;
+  procurement_status: string;
+  procurement_publication_date: string;
+  procurement_opening_date: string;
+  procurement_classification_code: string;
+  procurement_source_url: string;
   legal_label: string;
   legal_tone: "good" | "warn" | "risk";
   follow_up_status: string;
@@ -167,6 +173,7 @@ export function LegalWorkbenchClient({
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [savingStaff, setSavingStaff] = useState(false);
+  const [removingStaffEmail, setRemovingStaffEmail] = useState("");
   const [savingBulk, setSavingBulk] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
@@ -562,6 +569,37 @@ export function LegalWorkbenchClient({
     }
   }
 
+  async function removeLegalUser(member: LegalStaffMember) {
+    const memberEmail = member.email.trim().toLowerCase();
+    if (memberEmail === currentUser.trim().toLowerCase()) {
+      setStaffError("No puede eliminar su propia cuenta desde Mesa Legal.");
+      return;
+    }
+    if (!window.confirm(`Eliminar el acceso de ${member.full_name || member.email}? Esta acción elimina su cuenta de Mesa Legal.`)) {
+      return;
+    }
+    setRemovingStaffEmail(memberEmail);
+    setStaffError("");
+    setStaffSuccess("");
+    try {
+      const response = await fetch("/api/legal-staff", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: memberEmail }),
+      });
+      const body = (await response.json()) as { error?: string };
+      if (!response.ok) {
+        throw new Error(body.error || "No se pudo eliminar el miembro.");
+      }
+      setStaff((current) => current.filter((entry) => entry.email.toLowerCase() !== memberEmail));
+      setStaffSuccess(`Se eliminó el acceso de ${member.full_name || member.email}.`);
+    } catch (caughtError) {
+      setStaffError(caughtError instanceof Error ? caughtError.message : "No se pudo eliminar el miembro.");
+    } finally {
+      setRemovingStaffEmail("");
+    }
+  }
+
   async function bulkAssignCases() {
     if (!selectedBulkCases.length) {
       setError("Seleccione al menos un caso para reasignar.");
@@ -791,6 +829,14 @@ export function LegalWorkbenchClient({
                       <strong>{member.full_name}</strong>
                       <small>{member.email}</small>
                       <small>{member.team} · {member.role} · {member.active === "false" ? "inactivo" : "activo"}</small>
+                      <button
+                        className="legal-remove-member"
+                        type="button"
+                        onClick={() => void removeLegalUser(member)}
+                        disabled={removingStaffEmail === member.email.toLowerCase() || member.email.toLowerCase() === currentUser.toLowerCase()}
+                      >
+                        {removingStaffEmail === member.email.toLowerCase() ? "Eliminando..." : "Eliminar acceso"}
+                      </button>
                     </article>
                   ))
                 ) : (
@@ -958,11 +1004,25 @@ export function LegalWorkbenchClient({
                     <div><dt>Institución</dt><dd>{selected.latest_institution || "Sin institución"}</dd></div>
                     <div><dt>Procedimiento</dt><dd>{selected.latest_opportunity_id || "Código no disponible"}</dd></div>
                     <div><dt>Contratación</dt><dd>{selected.latest_opportunity_title || "Sin título registrado"}</dd></div>
+                    <div><dt>Tipo de procedimiento</dt><dd>{selected.procurement_type || "No sincronizado"}</dd></div>
+                    <div><dt>Estado SICOP</dt><dd>{selected.procurement_status || "No sincronizado"}</dd></div>
+                    <div><dt>Publicación SICOP</dt><dd>{selected.procurement_publication_date || "No sincronizada"}</dd></div>
+                    <div><dt>Fecha de apertura</dt><dd>{selected.procurement_opening_date || "No sincronizada"}</dd></div>
+                    <div><dt>Clasificación</dt><dd>{selected.procurement_classification_code || "No sincronizada"}</dd></div>
                     <div><dt>Servicio solicitado</dt><dd>{selected.latest_request_service || "Sin tipo"}</dd></div>
                     <div><dt>Estado en portal</dt><dd>{selected.latest_request_status || "Sin estado"}</dd></div>
                     <div><dt>Solicitud recibida</dt><dd>{formatDate(selected.latest_request_at)}</dd></div>
                   </dl>
-                  <p className="legal-procurement-note">Los plazos, requisitos y documentos del expediente deben verificarse en SICOP antes de tomar una decisión legal.</p>
+                  {selected.procurement_source_url ? (
+                    <a className="legal-sicop-link" href={selected.procurement_source_url} target="_blank" rel="noreferrer">
+                      Abrir expediente en SICOP <span aria-hidden="true">↗</span>
+                    </a>
+                  ) : null}
+                  <p className="legal-procurement-note">
+                    {selected.procurement_source_url
+                      ? "Los plazos, requisitos y documentos definitivos deben verificarse en el expediente antes de tomar una decisión legal."
+                      : "No hay un expediente SICOP sincronizado para esta contratación. Verifique el procedimiento antes de tomar una decisión legal."}
+                  </p>
                 </section>
               </div>
 

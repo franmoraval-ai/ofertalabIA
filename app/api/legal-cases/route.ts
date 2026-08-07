@@ -1,7 +1,13 @@
 import { desc, sql } from "drizzle-orm";
 
 import { getDb } from "../../../db";
-import { legalCaseEvents, legalCases, portalProfiles, serviceRequests } from "../../../db/schema";
+import {
+  legalCaseEvents,
+  legalCases,
+  portalOpportunities,
+  portalProfiles,
+  serviceRequests,
+} from "../../../db/schema";
 import {
   buildLegalQueue,
   buildLegalQueueSummary,
@@ -36,7 +42,7 @@ export async function GET(request: Request) {
 
   try {
     const db = getDb();
-    const [profiles, requests, cases, events] = await Promise.all([
+    const [profiles, requests, cases, events, opportunities] = await Promise.all([
       db
         .select({
           id: portalProfiles.id,
@@ -114,9 +120,21 @@ export async function GET(request: Request) {
         .from(legalCaseEvents)
         .orderBy(desc(legalCaseEvents.createdAt))
         .limit(15_000),
+      db
+        .select({
+          procedure_no: portalOpportunities.procedureNo,
+          procedure_type: portalOpportunities.procedureType,
+          status: portalOpportunities.status,
+          publication_date: portalOpportunities.publicationDate,
+          opening_date: portalOpportunities.openingDate,
+          classification_code: portalOpportunities.classificationCode,
+          source_url: portalOpportunities.sourceUrl,
+        })
+        .from(portalOpportunities)
+        .limit(5_000),
     ]);
 
-    const queue = buildLegalQueue(profiles, requests, cases, events);
+    const queue = buildLegalQueue(profiles, requests, cases, events, opportunities);
     return Response.json({
       count: queue.length,
       summary: buildLegalQueueSummary(queue),

@@ -505,6 +505,21 @@ button { cursor: pointer; }
   color: var(--soft);
 }
 
+.legal-remove-member {
+  align-self: start;
+  background: transparent;
+  border: 1px solid #d87261;
+  border-radius: 6px;
+  color: #a93f31;
+  font-size: 12px;
+  font-weight: 750;
+  margin-top: 6px;
+  min-height: 34px;
+  padding: 0 10px;
+}
+.legal-remove-member:hover:not(:disabled) { background: #fff0ed; }
+.legal-remove-member:disabled { cursor: not-allowed; opacity: .55; }
+
 .legal-list-card,
 .legal-detail-card {
   min-height: 620px;
@@ -803,6 +818,22 @@ button { cursor: pointer; }
   gap: 10px;
   margin: 14px 0 0;
 }
+
+.legal-sicop-link {
+  align-items: center;
+  background: var(--navy);
+  border-radius: 6px;
+  color: white;
+  display: inline-flex;
+  font-size: 13px;
+  font-weight: 750;
+  gap: 12px;
+  margin-top: 16px;
+  min-height: 42px;
+  padding: 0 14px;
+  text-decoration: none;
+}
+.legal-sicop-link:hover { background: var(--teal-dark); }
 
 .legal-facts div {
   border-bottom: 1px solid rgba(8, 40, 62, .08);

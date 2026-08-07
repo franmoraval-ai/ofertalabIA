@@ -161,3 +161,44 @@ test("eleva casos con fecha objetivo vencida", () => {
   assert.match(queue[0].urgency_label, /Vencido desde/);
   assert.equal(queue[0].target_date.length, 10);
 });
+
+test("adjunta resumen y enlace seguro de SICOP a la contratación", () => {
+  const queue = buildLegalQueue(
+    [],
+    [{
+      id: "request-1",
+      opportunity_id: "2026LD-000001-0000100001",
+      opportunity_title: "Mantenimiento de infraestructura",
+      institution: "Institución de prueba",
+      service: "integral",
+      company_name: "Empresa legal",
+      contact_name: "Ana",
+      contact_email: "ana@empresa.test",
+      contact_phone: "8888-0001",
+      company_website: "",
+      company_province: "San Jose",
+      company_experience: "5 anos",
+      company_capacity: "Alta",
+      company_products: "Mantenimiento",
+      company_summary: "Ficha completa",
+      status: "Solicitada",
+      created_at: isoDaysAgo(1),
+    }],
+    [],
+    [],
+    [{
+      procedure_no: "2026LD-000001-0000100001",
+      procedure_type: "Licitación Reducida",
+      status: "Publicado",
+      publication_date: "2026-08-01",
+      opening_date: "2026-08-20",
+      classification_code: "72101500",
+      source_url: "https://www.sicop.go.cr/expediente/123",
+    }],
+  );
+
+  assert.equal(queue[0].procurement_type, "Licitación Reducida");
+  assert.equal(queue[0].procurement_status, "Publicado");
+  assert.equal(queue[0].procurement_opening_date, "2026-08-20");
+  assert.equal(queue[0].procurement_source_url, "https://www.sicop.go.cr/expediente/123");
+});

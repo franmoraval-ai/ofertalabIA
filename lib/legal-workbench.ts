@@ -34,6 +34,16 @@ export type ServiceRequestRecord = {
   created_at: string;
 };
 
+export type PortalOpportunityRecord = {
+  procedure_no: string;
+  procedure_type: string;
+  status: string;
+  publication_date: string;
+  opening_date: string;
+  classification_code: string;
+  source_url: string;
+};
+
 export type LegalCaseRecord = {
   case_key: string;
   company_name: string;
@@ -96,6 +106,12 @@ export type LegalQueueRow = {
   latest_opportunity_id: string;
   latest_opportunity_title: string;
   latest_institution: string;
+  procurement_type: string;
+  procurement_status: string;
+  procurement_publication_date: string;
+  procurement_opening_date: string;
+  procurement_classification_code: string;
+  procurement_source_url: string;
   legal_label: string;
   legal_tone: "good" | "warn" | "risk";
   follow_up_status: string;
@@ -159,6 +175,19 @@ function slug(value: string) {
     .trim()
     .replace(/[-\s]+/g, "-")
     .slice(0, 120);
+}
+
+function sicopSourceUrl(value: unknown) {
+  const sourceUrl = text(value, 2_000);
+  try {
+    const url = new URL(sourceUrl);
+    const host = url.hostname.toLowerCase();
+    return url.protocol === "https:" && (host === "sicop.go.cr" || host.endsWith(".sicop.go.cr"))
+      ? url.toString()
+      : "";
+  } catch {
+    return "";
+  }
 }
 
 export function buildLegalCaseKey(profile?: Partial<PortalProfileRecord> | null, request?: Partial<ServiceRequestRecord> | null) {
@@ -339,11 +368,15 @@ export function buildLegalQueue(
   requests: ServiceRequestRecord[],
   legalCases: LegalCaseRecord[],
   legalCaseEvents: LegalCaseEventRecord[] = [],
+  opportunities: PortalOpportunityRecord[] = [],
 ) {
   const caseMap = new Map<string, LegalCaseRecord>(
     legalCases.map((entry) => [text(entry.case_key, 200).toLowerCase(), entry]),
   );
   const eventMap = new Map<string, LegalTimelineEvent[]>();
+  const opportunityMap = new Map(
+    opportunities.map((entry) => [text(entry.procedure_no, 120), entry]),
+  );
   for (const event of legalCaseEvents) {
     const key = text(event.case_key, 200).toLowerCase();
     const bucket = eventMap.get(key) || [];
@@ -387,6 +420,12 @@ export function buildLegalQueue(
       latest_opportunity_id: "",
       latest_opportunity_title: "",
       latest_institution: "",
+      procurement_type: "",
+      procurement_status: "",
+      procurement_publication_date: "",
+      procurement_opening_date: "",
+      procurement_classification_code: "",
+      procurement_source_url: "",
       legal_label: "",
       legal_tone: "warn",
       follow_up_status: "Sin estado",
@@ -452,6 +491,13 @@ export function buildLegalQueue(
   }
 
   const queue = Array.from(rows.values()).map((row) => {
+    const opportunity = opportunityMap.get(row.latest_opportunity_id);
+    row.procurement_type = text(opportunity?.procedure_type, 120);
+    row.procurement_status = text(opportunity?.status, 120);
+    row.procurement_publication_date = text(opportunity?.publication_date, 80);
+    row.procurement_opening_date = text(opportunity?.opening_date, 80);
+    row.procurement_classification_code = text(opportunity?.classification_code, 120);
+    row.procurement_source_url = sicopSourceUrl(opportunity?.source_url);
     const readiness = buildLegalReadiness(row);
     const legalCase = caseMap.get(row.case_key);
     row.legal_label = readiness.label;

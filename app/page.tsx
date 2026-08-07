@@ -466,7 +466,7 @@ function Registration({
                 onChange={(event) => update("products", event.target.value)}
                 placeholder="Ej. cámaras, alarmas, monitoreo e instalación"
               />
-              <small>Escriba con sus propias palabras. Nosotros lo organizamos.</small>
+              <small>Indique de 2 a 4 productos o servicios concretos. Evite solo categorías generales como “seguridad” o “tecnología”.</small>
             </label>
             <label>
               Provincia principal

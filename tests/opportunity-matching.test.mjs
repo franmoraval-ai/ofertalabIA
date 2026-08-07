@@ -81,6 +81,11 @@ test("una descripción demasiado general no mezcla mantenimientos", () => {
   assert.deepEqual(rankOpportunities("Venta de equipos y mantenimiento general", samples), []);
 });
 
+test("una categoría amplia sola no muestra negocios relacionados de forma imprecisa", () => {
+  assert.deepEqual(rankOpportunities("Seguridad", samples), []);
+  assert.deepEqual(rankOpportunities("Tecnología", samples), []);
+});
+
 test("seguridad electrónica no confunde seguridad ocupacional", () => {
   const occupational = {
     score: 91,

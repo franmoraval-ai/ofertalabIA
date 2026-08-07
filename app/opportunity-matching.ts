@@ -49,6 +49,35 @@ const ignoredWords = new Set([
   "comercializacion",
 ]);
 
+const broadSectorTerms = new Set([
+  "seguridad",
+  "limpieza",
+  "tecnologia",
+  "construccion",
+  "infraestructura",
+  "mobiliario",
+  "salud",
+  "equipo medico",
+  "automotriz",
+  "transporte",
+  "logistica",
+  "consultoria",
+  "asesoria",
+  "comunicacion",
+  "turismo",
+  "evento",
+  "electricidad",
+  "energia",
+  "maquinaria",
+  "herramienta",
+  "agricultura",
+  "ambiental",
+  "textil",
+  "proteccion personal",
+  "contabilidad",
+  "financiero",
+]);
+
 export function normalizeBusinessText(value: string) {
   return value
     .normalize("NFD")
@@ -79,7 +108,10 @@ function profileRules(products: string) {
     const matchedTerms = sector.terms.filter((term) =>
       matchesBusinessTerm(normalized, term),
     );
-    if (!matchedTerms.length) return [];
+    const specificTerms = matchedTerms.filter(
+      (term) => !broadSectorTerms.has(normalizeBusinessText(term)),
+    );
+    if (!specificTerms.length) return [];
     return [
       {
         sector,
@@ -95,6 +127,10 @@ function profileRules(products: string) {
       groups: detectedGroups,
       terms: [],
     };
+  }
+
+  if (businessSectors.some(({ terms }) => terms.some((term) => matchesBusinessTerm(normalized, term)))) {
+    return { groups: [], terms: [] };
   }
 
   return {
