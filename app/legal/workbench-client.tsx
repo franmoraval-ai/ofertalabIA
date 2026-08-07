@@ -466,7 +466,7 @@ export function LegalWorkbenchClient({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
       });
-      const body = (await response.json()) as { error?: string };
+      const body = (await response.json()) as { error?: string; auth_user_id?: string; auth_email?: string };
       if (!response.ok) {
         throw new Error(body.error || "No se pudo guardar el caso legal.");
       }
@@ -548,7 +548,9 @@ export function LegalWorkbenchClient({
         });
         return next.sort((left, right) => left.full_name.localeCompare(right.full_name, "es"));
       });
-      setStaffSuccess("Invitación enviada. La persona recibirá un correo para activar su acceso.");
+      setStaffSuccess(
+        `Cuenta creada para ${body.auth_email || payload.email}. ID de Supabase: ${body.auth_user_id || "no disponible"}. La persona recibirá un correo para activar su acceso.`,
+      );
     } catch (caughtError) {
       setStaffError(caughtError instanceof Error ? caughtError.message : "No se pudo invitar al responsable.");
     } finally {

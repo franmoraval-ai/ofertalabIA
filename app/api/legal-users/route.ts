@@ -108,7 +108,12 @@ export async function POST(request: Request) {
           updatedAt: now,
         },
       });
-    return Response.json({ invited: true, member }, { status: 201 });
+    return Response.json({
+      invited: true,
+      member,
+      auth_user_id: data.user.id,
+      auth_email: data.user.email || member.email,
+    }, { status: 201 });
   } catch (error) {
     const message = error instanceof Error ? error.message : "No se pudo invitar al usuario.";
     return Response.json({ error: message }, { status: 400 });
