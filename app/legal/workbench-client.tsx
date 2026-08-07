@@ -530,7 +530,11 @@ export function LegalWorkbenchClient({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
       });
-      const body = (await response.json()) as { error?: string };
+      const body = (await response.json()) as {
+        error?: string;
+        auth_user_id?: string;
+        auth_email?: string;
+      };
       if (!response.ok) {
         throw new Error(body.error || "No se pudo enviar la invitación.");
       }
