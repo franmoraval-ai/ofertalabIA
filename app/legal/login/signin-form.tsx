@@ -6,7 +6,17 @@ import { createClient } from "@supabase/supabase-js";
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || "";
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "";
 
-const supabase = supabaseUrl && supabaseAnonKey
+function isValidSupabaseUrl(value: string) {
+  try {
+    const url = new URL(value);
+    return url.protocol === "https:" || url.protocol === "http:";
+  } catch {
+    return false;
+  }
+}
+
+const supabaseConfigured = isValidSupabaseUrl(supabaseUrl) && Boolean(supabaseAnonKey);
+const supabase = supabaseConfigured
   ? createClient(supabaseUrl, supabaseAnonKey)
   : null;
 
@@ -20,7 +30,9 @@ export function LegalLoginForm({ next }: { next: string }) {
     event.preventDefault();
     setError("");
     if (!supabase) {
-      setError("Supabase Auth no está configurado para Mesa Legal.");
+      setError(
+        "Supabase Auth no está configurado correctamente para Mesa Legal. Revise NEXT_PUBLIC_SUPABASE_URL y NEXT_PUBLIC_SUPABASE_ANON_KEY.",
+      );
       return;
     }
     setLoading(true);

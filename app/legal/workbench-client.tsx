@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 
 type LegalCase = {
   case_key: string;
+  status: string;
   company_name: string;
   contact_name: string;
   contact_email: string;
@@ -287,6 +288,15 @@ export function LegalWorkbenchClient({
     });
   }, [institutionFilter, ownerFilter, queue, search, slaFilter]);
 
+  const caseMetrics = useMemo(() => {
+    return {
+      critical: queue.filter((entry) => entry.sla_bucket === "critico").length,
+      today: queue.filter((entry) => entry.sla_bucket === "hoy").length,
+      unassigned: queue.filter((entry) => !entry.assigned_to.trim()).length,
+      ready: queue.filter((entry) => entry.legal_label === "Listo para Legal").length,
+    };
+  }, [queue]);
+
   const activeSelectedKey = filtered.some((entry) => entry.case_key === selectedKey)
     ? selectedKey
     : (filtered[0]?.case_key || "");
@@ -303,49 +313,6 @@ export function LegalWorkbenchClient({
     () => queue.filter((entry) => selectedCaseKeys.includes(entry.case_key)),
     [queue, selectedCaseKeys],
   );
-
-  const workloadRows = useMemo(() => {
-    const bucket = new Map<string, { owner: string; total: number; inReview: number; pending: number; ready: number; critical: number; today: number }>();
-    for (const entry of queue) {
-      const owner = entry.assigned_to.trim() || "Sin responsable";
-      const current = bucket.get(owner) || { owner, total: 0, inReview: 0, pending: 0, ready: 0, critical: 0, today: 0 };
-      current.total += 1;
-      if (entry.follow_up_status === "En revisión") current.inReview += 1;
-      if (entry.follow_up_status === "Pendiente contacto") current.pending += 1;
-      if (entry.follow_up_status === "Listo para oferta") current.ready += 1;
-      if (entry.sla_bucket === "critico") current.critical += 1;
-      if (entry.sla_bucket === "hoy") current.today += 1;
-      bucket.set(owner, current);
-    }
-    return Array.from(bucket.values()).sort((left, right) => {
-      if (left.owner === "Sin responsable") return -1;
-      if (right.owner === "Sin responsable") return 1;
-      if (right.critical !== left.critical) return right.critical - left.critical;
-      if (right.total !== left.total) return right.total - left.total;
-      return left.owner.localeCompare(right.owner, "es");
-    });
-  }, [queue]);
-
-  const institutionRows = useMemo(() => {
-    const bucket = new Map<string, { institution: string; total: number; critical: number; today: number; pending: number }>();
-    for (const entry of queue) {
-      const institution = entry.latest_institution.trim() || "Sin institución";
-      const current = bucket.get(institution) || { institution, total: 0, critical: 0, today: 0, pending: 0 };
-      current.total += 1;
-      if (entry.sla_bucket === "critico") current.critical += 1;
-      if (entry.sla_bucket === "hoy") current.today += 1;
-      if (entry.follow_up_status === "Pendiente contacto") current.pending += 1;
-      bucket.set(institution, current);
-    }
-    return Array.from(bucket.values())
-      .sort((left, right) => {
-        if (right.critical !== left.critical) return right.critical - left.critical;
-        if (right.today !== left.today) return right.today - left.today;
-        if (right.total !== left.total) return right.total - left.total;
-        return left.institution.localeCompare(right.institution, "es");
-      })
-      .slice(0, 6);
-  }, [queue]);
 
   const totalSelectedFiltered = filtered.filter((entry) => selectedCaseKeys.includes(entry.case_key)).length;
   const allFilteredSelected = filtered.length > 0 && totalSelectedFiltered === filtered.length;
@@ -467,14 +434,6 @@ export function LegalWorkbenchClient({
       }
       return Array.from(next);
     });
-  }
-
-  function applyOwnerFilter(owner: string) {
-    setOwnerFilter(owner);
-  }
-
-  function applyInstitutionFilter(institution: string) {
-    setInstitutionFilter(institution);
   }
 
   function clearQuickFilters() {
@@ -669,10 +628,10 @@ export function LegalWorkbenchClient({
     <main className="legal-shell">
       <section className="legal-header-card">
         <div>
-          <p className="legal-eyebrow">Mesa interna</p>
+          <p className="legal-eyebrow">Operación interna</p>
           <h1>Mesa Legal</h1>
           <p className="legal-subcopy">
-            Bandeja multiusuario para seguimiento, notas y gestión de casos legales sobre las solicitudes del portal.
+            Atienda los casos pendientes, asigne un responsable y reúna la información necesaria antes de avanzar con una contratación.
           </p>
         </div>
         <div className="legal-user-block">
@@ -686,8 +645,9 @@ export function LegalWorkbenchClient({
 
       <section className="legal-summary-card">
         <div>
+          <p className="legal-eyebrow">Bandeja de hoy</p>
           <strong>{summary}</strong>
-          <p>La sincronización humana ya se gestiona aquí; el escritorio queda como motor operativo y SICOP.</p>
+          <p>Seleccione un caso para revisar el cliente, la contratación registrada y el siguiente paso legal.</p>
         </div>
         <div className="legal-toolbar">
           <input
@@ -695,7 +655,8 @@ export function LegalWorkbenchClient({
             type="search"
             value={search}
             onChange={(event) => setSearch(event.target.value)}
-            placeholder="Buscar por empresa, oferta, correo o estado"
+            placeholder="Buscar empresa, contratación o institución"
+            aria-label="Buscar casos legales"
           />
           <select
             className="legal-owner-filter"
@@ -732,47 +693,27 @@ export function LegalWorkbenchClient({
         </div>
       </section>
 
-      <section className="legal-workload-card">
-        <div className="legal-list-head">
-          <h2>Carga por responsable</h2>
-          <span>{workloadRows.length} frente(s)</span>
-        </div>
-        <div className="legal-workload-grid">
-          {workloadRows.map((row) => (
-            <button
-              key={row.owner}
-              className={`legal-workload-tile legal-workload-button ${ownerFilter === row.owner ? "active" : ""}`}
-              onClick={() => applyOwnerFilter(row.owner)}
-              type="button"
-            >
-              <strong>{row.owner}</strong>
-              <small>{row.total} caso(s)</small>
-              <p>Críticos: {row.critical} · Hoy: {row.today} · Pendiente contacto: {row.pending}</p>
-              <p>En revisión: {row.inReview} · Listo oferta: {row.ready}</p>
-            </button>
-          ))}
-        </div>
-      </section>
-
-      <section className="legal-workload-card">
-        <div className="legal-list-head">
-          <h2>Atraso por institución</h2>
-          <span>{institutionRows.length} foco(s)</span>
-        </div>
-        <div className="legal-workload-grid">
-          {institutionRows.map((row) => (
-            <button
-              key={row.institution}
-              className={`legal-workload-tile legal-workload-button ${institutionFilter === row.institution ? "active" : ""}`}
-              onClick={() => applyInstitutionFilter(row.institution)}
-              type="button"
-            >
-              <strong>{row.institution}</strong>
-              <small>{row.total} caso(s)</small>
-              <p>Críticos: {row.critical} · Hoy: {row.today} · Pendiente contacto: {row.pending}</p>
-            </button>
-          ))}
-        </div>
+      <section className="legal-metric-grid" aria-label="Resumen de casos">
+        <button className={`legal-metric-card critical ${slaFilter === "critico" ? "active" : ""}`} type="button" onClick={() => setSlaFilter("critico")}>
+          <span>Críticos</span>
+          <strong>{caseMetrics.critical}</strong>
+          <small>Requieren movimiento inmediato</small>
+        </button>
+        <button className={`legal-metric-card today ${slaFilter === "hoy" ? "active" : ""}`} type="button" onClick={() => setSlaFilter("hoy")}>
+          <span>Atender hoy</span>
+          <strong>{caseMetrics.today}</strong>
+          <small>Con revisión o fecha próxima</small>
+        </button>
+        <button className={`legal-metric-card ${ownerFilter === "Sin responsable" ? "active" : ""}`} type="button" onClick={() => setOwnerFilter("Sin responsable")}>
+          <span>Sin responsable</span>
+          <strong>{caseMetrics.unassigned}</strong>
+          <small>Asigne un caso para iniciar</small>
+        </button>
+        <button className={`legal-metric-card ready ${search === "Listo para Legal" ? "active" : ""}`} type="button" onClick={() => { setSearch("Listo para Legal"); setSlaFilter("Todos"); setOwnerFilter("Todos"); }}>
+          <span>Listos para Legal</span>
+          <strong>{caseMetrics.ready}</strong>
+          <small>Con ficha suficiente para revisión</small>
+        </button>
       </section>
 
       {error ? <p className="legal-error-banner">{error}</p> : null}
@@ -858,57 +799,53 @@ export function LegalWorkbenchClient({
       <section className="legal-workbench-grid">
         <div className="legal-list-card">
           <div className="legal-list-head">
-            <h2>Casos priorizados</h2>
+            <div>
+              <p className="legal-eyebrow">Pendientes</p>
+              <h2>Casos por atender</h2>
+            </div>
             <span>{loading ? "Cargando..." : `${filtered.length} caso(s)`}</span>
           </div>
-          <div className="legal-bulk-toolbar">
-            <label className="legal-case-toggle-all">
-              <input type="checkbox" checked={allFilteredSelected} onChange={() => toggleSelectFiltered()} />
-              Seleccionar visibles
-            </label>
-            <select value={bulkAssignee} onChange={(event) => setBulkAssignee(event.target.value)}>
-              <option value="">Sin responsable</option>
-              {staffOptions.map((option) => (
-                <option key={option.email} value={option.full_name}>{option.full_name}</option>
-              ))}
-            </select>
-            <select value={bulkStatus} onChange={(event) => setBulkStatus(event.target.value)}>
-              <option value="">Sin cambio de estado</option>
-              {FOLLOW_UP_OPTIONS.map((option) => (
-                <option key={option} value={option}>{option}</option>
-              ))}
-            </select>
-            <input type="date" value={bulkTargetDate} onChange={(event) => setBulkTargetDate(event.target.value)} />
-            <button className="secondary" type="button" onClick={() => void bulkAssignCases()} disabled={savingBulk || !selectedCaseKeys.length}>
-              {savingBulk ? "Actualizando..." : `Aplicar a ${selectedCaseKeys.length || 0}`}
-            </button>
-          </div>
-          <div className="legal-bulk-note-grid">
-            <select value={bulkNote} onChange={(event) => setBulkNote(event.target.value)}>
-              <option value="">Plantilla de nota rápida</option>
-              {BULK_NOTE_TEMPLATES.filter(Boolean).map((option) => (
-                <option key={option} value={option}>{option}</option>
-              ))}
-            </select>
-            <textarea
-              value={bulkNote}
-              onChange={(event) => setBulkNote(event.target.value)}
-              rows={3}
-              placeholder="Nota común para la tanda seleccionada"
-            />
-            <select value={bulkNextStep} onChange={(event) => setBulkNextStep(event.target.value)}>
-              <option value="">Plantilla de siguiente paso</option>
-              {BULK_NEXT_STEP_TEMPLATES.filter(Boolean).map((option) => (
-                <option key={option} value={option}>{option}</option>
-              ))}
-            </select>
-            <textarea
-              value={bulkNextStep}
-              onChange={(event) => setBulkNextStep(event.target.value)}
-              rows={3}
-              placeholder="Siguiente paso común para la tanda seleccionada"
-            />
-          </div>
+          <details className="legal-bulk-panel">
+            <summary>Actualizar varios casos</summary>
+            <div className="legal-bulk-toolbar">
+              <label className="legal-case-toggle-all">
+                <input type="checkbox" checked={allFilteredSelected} onChange={() => toggleSelectFiltered()} />
+                Seleccionar visibles
+              </label>
+              <select value={bulkAssignee} onChange={(event) => setBulkAssignee(event.target.value)} aria-label="Responsable para los casos seleccionados">
+                <option value="">Sin cambio de responsable</option>
+                {staffOptions.map((option) => (
+                  <option key={option.email} value={option.full_name}>{option.full_name}</option>
+                ))}
+              </select>
+              <select value={bulkStatus} onChange={(event) => setBulkStatus(event.target.value)} aria-label="Estado para los casos seleccionados">
+                <option value="">Sin cambio de estado</option>
+                {FOLLOW_UP_OPTIONS.map((option) => (
+                  <option key={option} value={option}>{option}</option>
+                ))}
+              </select>
+              <input type="date" value={bulkTargetDate} onChange={(event) => setBulkTargetDate(event.target.value)} aria-label="Fecha objetivo para los casos seleccionados" />
+              <button className="secondary" type="button" onClick={() => void bulkAssignCases()} disabled={savingBulk || !selectedCaseKeys.length}>
+                {savingBulk ? "Actualizando..." : `Aplicar a ${selectedCaseKeys.length || 0}`}
+              </button>
+            </div>
+            <div className="legal-bulk-note-grid">
+              <select value={bulkNote} onChange={(event) => setBulkNote(event.target.value)}>
+                <option value="">Plantilla de nota rápida</option>
+                {BULK_NOTE_TEMPLATES.filter(Boolean).map((option) => (
+                  <option key={option} value={option}>{option}</option>
+                ))}
+              </select>
+              <textarea value={bulkNote} onChange={(event) => setBulkNote(event.target.value)} rows={3} placeholder="Nota común para la tanda seleccionada" />
+              <select value={bulkNextStep} onChange={(event) => setBulkNextStep(event.target.value)}>
+                <option value="">Plantilla de siguiente paso</option>
+                {BULK_NEXT_STEP_TEMPLATES.filter(Boolean).map((option) => (
+                  <option key={option} value={option}>{option}</option>
+                ))}
+              </select>
+              <textarea value={bulkNextStep} onChange={(event) => setBulkNextStep(event.target.value)} rows={3} placeholder="Siguiente paso común para la tanda seleccionada" />
+            </div>
+          </details>
           <div className="legal-case-list">
             {filtered.map((entry) => (
               <div
@@ -920,15 +857,20 @@ export function LegalWorkbenchClient({
                     type="checkbox"
                     checked={selectedCaseKeys.includes(entry.case_key)}
                     onChange={() => toggleCaseSelection(entry.case_key)}
+                    aria-label={`Seleccionar ${entry.company_name || "caso sin empresa"}`}
                   />
-                  <span>Seleccionar</span>
+                  <span className="legal-sr-only">Seleccionar</span>
                 </label>
                 <button onClick={() => setSelectedKey(entry.case_key)} type="button" className="legal-case-button">
-                  <span className={`legal-tone ${entry.legal_tone}`}>{entry.legal_label}</span>
-                  <span className={`legal-sla-badge ${entry.sla_bucket}`}>{entry.urgency_label}</span>
+                  <span className="legal-case-tags">
+                    <span className={`legal-sla-badge ${entry.sla_bucket}`}>{entry.urgency_label}</span>
+                    <span className={`legal-tone ${entry.legal_tone}`}>{entry.legal_label}</span>
+                  </span>
                   <strong>{entry.company_name || "Empresa sin nombre"}</strong>
-                  <small>{entry.latest_opportunity_id || entry.latest_opportunity_title || "Sin oferta asociada"}</small>
-                  <small>{entry.follow_up_status} · {entry.request_count} solicitud(es)</small>
+                  <small>{entry.latest_opportunity_title || entry.latest_opportunity_id || "Sin contratación asociada"}</small>
+                  <span className="legal-case-meta">
+                    {entry.assigned_to ? `Asignado a ${entry.assigned_to}` : "Sin responsable"} · {entry.follow_up_status}
+                  </span>
                 </button>
               </div>
             ))}
@@ -938,6 +880,7 @@ export function LegalWorkbenchClient({
         <div className="legal-detail-card">
           {selected ? (
             <form
+              key={selected.case_key}
               action={async (formData) => {
                 await saveCase(formData);
               }}
@@ -945,28 +888,75 @@ export function LegalWorkbenchClient({
             >
               <header className="legal-detail-header">
                 <div>
+                  <p className="legal-eyebrow">Caso seleccionado</p>
                   <h2>{selected.company_name || "Empresa sin nombre"}</h2>
-                  <p>{selected.legal_label} · {selected.follow_up_status} · actualizado {formatDate(selected.updated_at || selected.latest_request_at)}</p>
-                  <p>{selected.urgency_label}</p>
-                  {selected.target_date ? <p>Fecha objetivo: {selected.target_date}</p> : null}
+                  <p>{selected.latest_institution || "Institución pendiente"} · {selected.latest_opportunity_id || "Código no disponible"}</p>
                 </div>
-                <span className={`legal-tone ${selected.legal_tone}`}>{selected.legal_label}</span>
+                <div className="legal-detail-badges">
+                  <span className={`legal-sla-badge ${selected.sla_bucket}`}>{selected.urgency_label}</span>
+                  <span className={`legal-tone ${selected.legal_tone}`}>{selected.legal_label}</span>
+                </div>
               </header>
 
-              <div className="legal-detail-grid">
-                <section>
-                  <h3>Contacto</h3>
-                  <p>{selected.contact_name || "Sin contacto"}</p>
-                  <p>{selected.contact_email || "Sin correo"}</p>
-                  <p>{selected.contact_phone || "Sin teléfono"}</p>
-                  <p>{selected.company_province || "Sin provincia"}</p>
+              <section className="legal-next-action">
+                <div>
+                  <p className="legal-eyebrow">Siguiente acción</p>
+                  <strong>{selected.next_step || "Defina el siguiente paso para este caso."}</strong>
+                  <small>Última actualización: {formatDate(selected.updated_at || selected.latest_request_at)}</small>
+                </div>
+                <div>
+                  <label>
+                    Responsable
+                    <select name="assigned_to" defaultValue={selected.assigned_to}>
+                      <option value="">Sin responsable</option>
+                      {assigneeOptions.map((option) => (
+                        <option key={option} value={option}>{option}</option>
+                      ))}
+                    </select>
+                  </label>
+                  <label>
+                    Estado
+                    <select name="follow_up_status" defaultValue={selected.follow_up_status}>
+                      {FOLLOW_UP_OPTIONS.map((option) => (
+                        <option key={option} value={option}>{option}</option>
+                      ))}
+                    </select>
+                  </label>
+                  <label>
+                    Fecha objetivo
+                    <input name="target_date" type="date" defaultValue={selected.target_date} />
+                  </label>
+                </div>
+              </section>
+
+              <div className="legal-case-detail-grid">
+                <section className="legal-stacked-card">
+                  <div className="legal-section-head">
+                    <h3>Cliente</h3>
+                    <span>{selected.status}</span>
+                  </div>
+                  <dl className="legal-facts">
+                    <div><dt>Contacto</dt><dd>{selected.contact_name || "Sin contacto"}</dd></div>
+                    <div><dt>Correo</dt><dd>{selected.contact_email || "Sin correo"}</dd></div>
+                    <div><dt>Teléfono</dt><dd>{selected.contact_phone || "Sin teléfono"}</dd></div>
+                    <div><dt>Provincia</dt><dd>{selected.company_province || "Sin provincia"}</dd></div>
+                    <div><dt>Sitio web</dt><dd>{selected.company_website || "No registrado"}</dd></div>
+                  </dl>
                 </section>
-                <section>
-                  <h3>Última ayuda</h3>
-                  <p>{selected.latest_request_service || "Sin tipo"}</p>
-                  <p>{selected.latest_request_status || "Sin estado"}</p>
-                  <p>{selected.latest_opportunity_id || selected.latest_opportunity_title || "Sin oferta"}</p>
-                  <p>{selected.latest_institution || "Sin institución"}</p>
+                <section className="legal-stacked-card legal-procurement-card">
+                  <div className="legal-section-head">
+                    <h3>Contratación registrada</h3>
+                    <span>{selected.request_count} solicitud(es)</span>
+                  </div>
+                  <dl className="legal-facts">
+                    <div><dt>Institución</dt><dd>{selected.latest_institution || "Sin institución"}</dd></div>
+                    <div><dt>Procedimiento</dt><dd>{selected.latest_opportunity_id || "Código no disponible"}</dd></div>
+                    <div><dt>Contratación</dt><dd>{selected.latest_opportunity_title || "Sin título registrado"}</dd></div>
+                    <div><dt>Servicio solicitado</dt><dd>{selected.latest_request_service || "Sin tipo"}</dd></div>
+                    <div><dt>Estado en portal</dt><dd>{selected.latest_request_status || "Sin estado"}</dd></div>
+                    <div><dt>Solicitud recibida</dt><dd>{formatDate(selected.latest_request_at)}</dd></div>
+                  </dl>
+                  <p className="legal-procurement-note">Los plazos, requisitos y documentos del expediente deben verificarse en SICOP antes de tomar una decisión legal.</p>
                 </section>
               </div>
 
@@ -976,6 +966,27 @@ export function LegalWorkbenchClient({
                 <p>{selected.company_summary || "Sin resumen comercial."}</p>
                 <p>Experiencia: {selected.company_experience || "Sin detalle"}</p>
                 <p>Capacidad: {selected.company_capacity || "Sin detalle"}</p>
+              </section>
+
+              <section className="legal-action-card">
+                <div className="legal-section-head">
+                  <h3>Seguimiento legal</h3>
+                  <span>{selected.assigned_to ? `Responsable: ${selected.assigned_to}` : "Sin responsable"}</span>
+                </div>
+                <label>
+                  Siguiente paso
+                  <input name="next_step" defaultValue={selected.next_step} placeholder="Ejemplo: solicitar personería y validar requisitos del pliego" />
+                </label>
+                <label>
+                  Nota interna
+                  <textarea name="note" defaultValue={selected.note} rows={6} placeholder="Acuerdos, documentos recibidos o riesgos que debe conocer el equipo" />
+                </label>
+                <div className="legal-form-actions">
+                  <button className="primary" type="submit" disabled={saving}>
+                    {saving ? "Guardando..." : "Guardar actualización"}
+                  </button>
+                  <span className="legal-save-hint">Se registra en el historial del caso.</span>
+                </div>
               </section>
 
               <section className="legal-stacked-card">
@@ -997,49 +1008,6 @@ export function LegalWorkbenchClient({
                   )}
                 </div>
               </section>
-
-              <section className="legal-fields-grid">
-                <label>
-                  Seguimiento interno
-                  <select name="follow_up_status" defaultValue={selected.follow_up_status}>
-                    {FOLLOW_UP_OPTIONS.map((option) => (
-                      <option key={option} value={option}>{option}</option>
-                    ))}
-                  </select>
-                </label>
-                <label>
-                  Responsable
-                  <select name="assigned_to" defaultValue={selected.assigned_to}>
-                    <option value="">Sin responsable</option>
-                    {assigneeOptions.map((option) => (
-                      <option key={option} value={option}>{option}</option>
-                    ))}
-                  </select>
-                </label>
-                <label>
-                  Fecha objetivo interna
-                  <input name="target_date" type="date" defaultValue={selected.target_date} />
-                </label>
-              </section>
-
-              <label>
-                Siguiente paso sugerido
-                <input name="next_step" defaultValue={selected.next_step} />
-              </label>
-
-              <label>
-                Nota interna
-                <textarea name="note" defaultValue={selected.note} rows={9} />
-              </label>
-
-              <div className="legal-form-actions">
-                <button className="primary" type="submit" disabled={saving}>
-                  {saving ? "Guardando..." : "Guardar caso"}
-                </button>
-                <a className="secondary legal-link-button" href={`/api/legal-cases`} target="_blank" rel="noreferrer">
-                  Ver API
-                </a>
-              </div>
             </form>
           ) : (
             <div className="legal-empty-state">
