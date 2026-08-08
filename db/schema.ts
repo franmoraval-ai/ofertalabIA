@@ -86,6 +86,12 @@ export const legalCaseEvents = pgTable("legal_case_events", {
   createdAt: text("created_at").notNull(),
 });
 
+export const legalDismissedCases = pgTable("legal_dismissed_cases", {
+  caseKey: text("case_key").primaryKey(),
+  dismissedBy: text("dismissed_by").notNull(),
+  dismissedAt: text("dismissed_at").notNull(),
+});
+
 export const legalStaff = pgTable("legal_staff", {
   email: text("email").primaryKey(),
   fullName: text("full_name").notNull().default(""),

@@ -551,3 +551,11 @@ export function buildLegalQueueSummary(rows: LegalQueueRow[]) {
   const critical = rows.filter((row) => row.sla_bucket === "critico").length;
   return `Casos legales: ${total} · criticos: ${critical} · listos para Legal: ${ready} · en revisión: ${inReview} · pendientes de contacto: ${pendingContact}`;
 }
+
+export function excludeDismissedLegalCases(
+  queue: LegalQueueRow[],
+  dismissedCaseKeys: Iterable<string>,
+) {
+  const dismissed = new Set(dismissedCaseKeys);
+  return queue.filter((entry) => !dismissed.has(entry.case_key));
+}

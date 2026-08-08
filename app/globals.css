@@ -520,6 +520,19 @@ button { cursor: pointer; }
 .legal-remove-member:hover:not(:disabled) { background: #fff0ed; }
 .legal-remove-member:disabled { cursor: not-allowed; opacity: .55; }
 
+.legal-remove-case {
+  background: transparent;
+  border: 1px solid #d87261;
+  border-radius: 6px;
+  color: #a93f31;
+  font-size: 12px;
+  font-weight: 750;
+  min-height: 34px;
+  padding: 0 10px;
+}
+.legal-remove-case:hover:not(:disabled) { background: #fff0ed; }
+.legal-remove-case:disabled { cursor: not-allowed; opacity: .55; }
+
 .legal-list-card,
 .legal-detail-card {
   min-height: 620px;

@@ -4,6 +4,7 @@ import { getDb } from "../../../db";
 import {
   legalCaseEvents,
   legalCases,
+  legalDismissedCases,
   portalOpportunities,
   portalProfiles,
   serviceRequests,
@@ -11,6 +12,7 @@ import {
 import {
   buildLegalQueue,
   buildLegalQueueSummary,
+  excludeDismissedLegalCases,
 } from "@/lib/legal-workbench";
 import { normalizeLegalCaseBatchPayload } from "./validation";
 import { authenticateLegalRequest } from "@/lib/legal-auth";
@@ -42,7 +44,7 @@ export async function GET(request: Request) {
 
   try {
     const db = getDb();
-    const [profiles, requests, cases, events, opportunities] = await Promise.all([
+    const [profiles, requests, cases, events, opportunities, dismissedCases] = await Promise.all([
       db
         .select({
           id: portalProfiles.id,
@@ -132,9 +134,16 @@ export async function GET(request: Request) {
         })
         .from(portalOpportunities)
         .limit(5_000),
+      db
+        .select({ case_key: legalDismissedCases.caseKey })
+        .from(legalDismissedCases)
+        .limit(5_000),
     ]);
 
-    const queue = buildLegalQueue(profiles, requests, cases, events, opportunities);
+    const queue = excludeDismissedLegalCases(
+      buildLegalQueue(profiles, requests, cases, events, opportunities),
+      dismissedCases.map((entry) => entry.case_key),
+    );
     return Response.json({
       count: queue.length,
       summary: buildLegalQueueSummary(queue),
@@ -214,6 +223,36 @@ export async function POST(request: Request) {
   } catch (error) {
     const message =
       error instanceof Error ? error.message : "No se pudo guardar el caso legal.";
+    return Response.json({ error: message }, { status: 400 });
+  }
+}
+
+export async function DELETE(request: Request) {
+  const auth = await authenticateLegalRequest(request);
+  if (!auth.ok) {
+    return Response.json({ error: auth.reason || "No autorizado." }, { status: 401 });
+  }
+  if (auth.user.role !== "admin") {
+    return Response.json({ error: "Solo un administrador puede retirar casos de Mesa Legal." }, { status: 403 });
+  }
+
+  try {
+    const payload = await request.json() as Record<string, unknown>;
+    const caseKey = typeof payload.case_key === "string" ? payload.case_key.trim().slice(0, 240) : "";
+    if (!caseKey) {
+      throw new Error("Debe indicar el caso que desea retirar.");
+    }
+    await getDb()
+      .insert(legalDismissedCases)
+      .values({
+        caseKey,
+        dismissedBy: auth.user.email,
+        dismissedAt: new Date().toISOString(),
+      })
+      .onConflictDoNothing();
+    return Response.json({ removed: true, case_key: caseKey });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "No se pudo retirar el caso de Mesa Legal.";
     return Response.json({ error: message }, { status: 400 });
   }
 }

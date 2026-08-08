@@ -43,6 +43,13 @@
       "when": 1785796281636,
       "tag": "0005_mysterious_scream",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1786132219510,
+      "tag": "0006_condemned_captain_marvel",
+      "breakpoints": true
     }
   ]
 }

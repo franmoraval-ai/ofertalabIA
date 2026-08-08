@@ -1,7 +1,11 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { buildLegalQueue, buildLegalQueueSummary } from "../lib/legal-workbench.ts";
+import {
+  buildLegalQueue,
+  buildLegalQueueSummary,
+  excludeDismissedLegalCases,
+} from "../lib/legal-workbench.ts";
 
 function isoDaysAgo(days) {
   return new Date(Date.now() - days * 86_400_000).toISOString();
@@ -150,7 +154,7 @@ test("eleva casos con fecha objetivo vencida", () => {
         note: "",
         priority_label: "Listo para Legal",
         next_step: "Coordinar cierre",
-        target_date: new Date(Date.now() - 86_400_000).toISOString().slice(0, 10),
+        target_date: new Date(Date.now() - 3 * 86_400_000).toISOString().slice(0, 10),
         updated_by: "admin@ofertalab.test",
         updated_at: isoDaysAgo(1),
       },
@@ -201,4 +205,11 @@ test("adjunta resumen y enlace seguro de SICOP a la contratación", () => {
   assert.equal(queue[0].procurement_status, "Publicado");
   assert.equal(queue[0].procurement_opening_date, "2026-08-20");
   assert.equal(queue[0].procurement_source_url, "https://www.sicop.go.cr/expediente/123");
+});
+
+test("omite los casos retirados sin eliminar la información de origen", () => {
+  const queue = [{ case_key: "email:ana@empresa.test" }, { case_key: "email:luis@empresa.test" }];
+  const visible = excludeDismissedLegalCases(queue, ["email:ana@empresa.test"]);
+
+  assert.deepEqual(visible, [{ case_key: "email:luis@empresa.test" }]);
 });

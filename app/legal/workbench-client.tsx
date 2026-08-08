@@ -174,6 +174,7 @@ export function LegalWorkbenchClient({
   const [saving, setSaving] = useState(false);
   const [savingStaff, setSavingStaff] = useState(false);
   const [removingStaffEmail, setRemovingStaffEmail] = useState("");
+  const [removingCaseKey, setRemovingCaseKey] = useState("");
   const [savingBulk, setSavingBulk] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
@@ -600,6 +601,34 @@ export function LegalWorkbenchClient({
     }
   }
 
+  async function removeLegalCase(entry: LegalCase) {
+    if (!window.confirm(`Retirar el caso de ${entry.company_name || "esta empresa"} de Mesa Legal? El perfil y la solicitud del cliente se conservarán.`)) {
+      return;
+    }
+    setRemovingCaseKey(entry.case_key);
+    setError("");
+    setSuccess("");
+    try {
+      const response = await fetch("/api/legal-cases", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ case_key: entry.case_key }),
+      });
+      const body = (await response.json()) as { error?: string };
+      if (!response.ok) {
+        throw new Error(body.error || "No se pudo retirar el caso.");
+      }
+      setQueue((current) => current.filter((item) => item.case_key !== entry.case_key));
+      setSelectedCaseKeys((current) => current.filter((caseKey) => caseKey !== entry.case_key));
+      setSelectedKey("");
+      setSuccess(`Se retiró el caso de ${entry.company_name || "la empresa"} de Mesa Legal.`);
+    } catch (caughtError) {
+      setError(caughtError instanceof Error ? caughtError.message : "No se pudo retirar el caso.");
+    } finally {
+      setRemovingCaseKey("");
+    }
+  }
+
   async function bulkAssignCases() {
     if (!selectedBulkCases.length) {
       setError("Seleccione al menos un caso para reasignar.");
@@ -947,6 +976,16 @@ export function LegalWorkbenchClient({
                 <div className="legal-detail-badges">
                   <span className={`legal-sla-badge ${selected.sla_bucket}`}>{selected.urgency_label}</span>
                   <span className={`legal-tone ${selected.legal_tone}`}>{selected.legal_label}</span>
+                  {currentRole === "admin" ? (
+                    <button
+                      className="legal-remove-case"
+                      type="button"
+                      onClick={() => void removeLegalCase(selected)}
+                      disabled={removingCaseKey === selected.case_key}
+                    >
+                      {removingCaseKey === selected.case_key ? "Retirando..." : "Retirar caso"}
+                    </button>
+                  ) : null}
                 </div>
               </header>
 
