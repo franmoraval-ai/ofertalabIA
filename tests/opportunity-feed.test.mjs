@@ -30,6 +30,30 @@ test("valida y conserva únicamente campos públicos", () => {
   assert.equal("internal_note" in feed.opportunities[0], false);
 });
 
+test("conserva evidencia pública para Mesa Legal sin publicar el archivo histórico", () => {
+  const feed = validateOpportunityFeed({
+    opportunities: [{
+      ...validItem,
+      public_visible: false,
+      detail_documents_count: 7,
+      detail_change_summary: "Se modificó el cartel",
+      opening_status: "Finalizada",
+      opening_summary: "Se recibieron cuatro ofertas",
+      participant_count: 4,
+      offer_count: 4,
+      inadmissible_count: 1,
+      private_note: "No debe pasar",
+    }],
+  });
+
+  const opportunity = feed.opportunities[0];
+  assert.equal(opportunity.public_visible, false);
+  assert.equal(opportunity.detail_documents_count, 7);
+  assert.equal(opportunity.opening_summary, "Se recibieron cuatro ofertas");
+  assert.equal(opportunity.participant_count, 4);
+  assert.equal("private_note" in opportunity, false);
+});
+
 test("elimina enlaces que no pertenecen a SICOP", () => {
   const feed = validateOpportunityFeed({
     opportunities: [{ ...validItem, source_url: "https://example.com/privado" }],

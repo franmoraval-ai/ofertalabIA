@@ -9,6 +9,16 @@ export type PublicOpportunityRecord = {
   opening_date: string;
   classification_code: string;
   source_url: string;
+  public_visible: boolean;
+  detail_documents_count: number;
+  detail_change_summary: string;
+  detail_change_at: string;
+  opening_status: string;
+  opening_summary: string;
+  participant_count: number;
+  offer_count: number;
+  inadmissible_count: number;
+  opening_result_updated_at: string;
 };
 
 export type ValidatedOpportunityFeed = {
@@ -19,6 +29,11 @@ export type ValidatedOpportunityFeed = {
 
 const text = (value: unknown, maximum: number) =>
   typeof value === "string" ? value.trim().slice(0, maximum) : "";
+
+const nonNegativeInteger = (value: unknown) => {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? Math.max(0, Math.trunc(parsed)) : 0;
+};
 
 function publicSicopUrl(value: unknown) {
   const candidate = text(value, 2_000);
@@ -68,6 +83,16 @@ export function validateOpportunityFeed(payload: unknown): ValidatedOpportunityF
       opening_date: openingDate,
       classification_code: text(item.classification_code, 120),
       source_url: publicSicopUrl(item.source_url),
+      public_visible: item.public_visible !== false,
+      detail_documents_count: nonNegativeInteger(item.detail_documents_count),
+      detail_change_summary: text(item.detail_change_summary, 2_000),
+      detail_change_at: text(item.detail_change_at, 80),
+      opening_status: text(item.opening_status, 240),
+      opening_summary: text(item.opening_summary, 4_000),
+      participant_count: nonNegativeInteger(item.participant_count),
+      offer_count: nonNegativeInteger(item.offer_count),
+      inadmissible_count: nonNegativeInteger(item.inadmissible_count),
+      opening_result_updated_at: text(item.opening_result_updated_at, 80),
     };
   });
 

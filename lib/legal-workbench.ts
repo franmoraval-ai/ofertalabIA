@@ -42,6 +42,15 @@ export type PortalOpportunityRecord = {
   opening_date: string;
   classification_code: string;
   source_url: string;
+  detail_documents_count?: number;
+  detail_change_summary?: string;
+  detail_change_at?: string;
+  opening_status?: string;
+  opening_summary?: string;
+  participant_count?: number;
+  offer_count?: number;
+  inadmissible_count?: number;
+  opening_result_updated_at?: string;
 };
 
 export type LegalCaseRecord = {
@@ -112,6 +121,15 @@ export type LegalQueueRow = {
   procurement_opening_date: string;
   procurement_classification_code: string;
   procurement_source_url: string;
+  procurement_detail_documents_count: number;
+  procurement_detail_change_summary: string;
+  procurement_detail_change_at: string;
+  procurement_opening_status: string;
+  procurement_opening_summary: string;
+  procurement_participant_count: number;
+  procurement_offer_count: number;
+  procurement_inadmissible_count: number;
+  procurement_opening_result_updated_at: string;
   legal_label: string;
   legal_tone: "good" | "warn" | "risk";
   follow_up_status: string;
@@ -191,14 +209,14 @@ function sicopSourceUrl(value: unknown) {
 }
 
 export function buildLegalCaseKey(profile?: Partial<PortalProfileRecord> | null, request?: Partial<ServiceRequestRecord> | null) {
+  const requestId = text(request?.id, 120).toLowerCase();
+  if (requestId) return `request:${requestId}`;
   const email = text(profile?.contact_email || request?.contact_email, 240).toLowerCase();
   if (email) return `email:${email}`;
   const profileId = text(profile?.id, 120).toLowerCase();
   if (profileId) return `profile:${profileId}`;
   const company = slug(text(profile?.company_name || request?.company_name, 240));
   if (company) return `company:${company}`;
-  const requestId = text(request?.id, 120).toLowerCase();
-  if (requestId) return `request:${requestId}`;
   return "case:sin-clave";
 }
 
@@ -395,6 +413,14 @@ export function buildLegalQueue(
     eventMap.set(key, bucket);
   }
   const rows = new Map<string, LegalQueueRow>();
+  const profileByEmail = new Map(
+    profiles
+      .filter((profile) => text(profile.contact_email, 240))
+      .map((profile) => [text(profile.contact_email, 240).toLowerCase(), profile]),
+  );
+  const requestEmails = new Set(
+    requests.map((request) => text(request.contact_email, 240).toLowerCase()).filter(Boolean),
+  );
 
   const ensureRow = (caseKey: string) => {
     const normalizedKey = text(caseKey, 200).toLowerCase();
@@ -426,6 +452,15 @@ export function buildLegalQueue(
       procurement_opening_date: "",
       procurement_classification_code: "",
       procurement_source_url: "",
+      procurement_detail_documents_count: 0,
+      procurement_detail_change_summary: "",
+      procurement_detail_change_at: "",
+      procurement_opening_status: "",
+      procurement_opening_summary: "",
+      procurement_participant_count: 0,
+      procurement_offer_count: 0,
+      procurement_inadmissible_count: 0,
+      procurement_opening_result_updated_at: "",
       legal_label: "",
       legal_tone: "warn",
       follow_up_status: "Sin estado",
@@ -447,6 +482,7 @@ export function buildLegalQueue(
   };
 
   for (const profile of profiles) {
+    if (requestEmails.has(text(profile.contact_email, 240).toLowerCase())) continue;
     const caseKey = buildLegalCaseKey(profile, null);
     const row = ensureRow(caseKey);
     row.company_name = text(profile.company_name, 240) || row.company_name;
@@ -466,16 +502,17 @@ export function buildLegalQueue(
   for (const request of requests) {
     const caseKey = buildLegalCaseKey(null, request);
     const row = ensureRow(caseKey);
-    row.company_name = text(request.company_name, 240) || row.company_name;
-    row.contact_name = text(request.contact_name, 240) || row.contact_name;
-    row.contact_email = text(request.contact_email, 240) || row.contact_email;
-    row.contact_phone = text(request.contact_phone, 80) || row.contact_phone;
-    row.company_website = text(request.company_website, 500) || row.company_website;
-    row.company_province = text(request.company_province, 120) || row.company_province;
-    row.company_experience = text(request.company_experience, 200) || row.company_experience;
-    row.company_capacity = text(request.company_capacity, 200) || row.company_capacity;
-    row.company_products = text(request.company_products, 2_000) || row.company_products;
-    row.company_summary = text(request.company_summary, 2_000) || row.company_summary;
+    const profile = profileByEmail.get(text(request.contact_email, 240).toLowerCase());
+    row.company_name = text(request.company_name || profile?.company_name, 240) || row.company_name;
+    row.contact_name = text(request.contact_name || profile?.contact_name, 240) || row.contact_name;
+    row.contact_email = text(request.contact_email || profile?.contact_email, 240) || row.contact_email;
+    row.contact_phone = text(request.contact_phone || profile?.contact_phone, 80) || row.contact_phone;
+    row.company_website = text(request.company_website || profile?.company_website, 500) || row.company_website;
+    row.company_province = text(request.company_province || profile?.company_province, 120) || row.company_province;
+    row.company_experience = text(request.company_experience || profile?.company_experience, 200) || row.company_experience;
+    row.company_capacity = text(request.company_capacity || profile?.company_capacity, 200) || row.company_capacity;
+    row.company_products = text(request.company_products || profile?.company_products, 2_000) || row.company_products;
+    row.company_summary = text(request.company_summary || profile?.company_summary, 2_000) || row.company_summary;
     row.request_count += 1;
     const createdAt = text(request.created_at, 80);
     if (!row.latest_request_at || compareIsoDescending(row.latest_request_at, createdAt) > 0) {
@@ -498,8 +535,18 @@ export function buildLegalQueue(
     row.procurement_opening_date = text(opportunity?.opening_date, 80);
     row.procurement_classification_code = text(opportunity?.classification_code, 120);
     row.procurement_source_url = sicopSourceUrl(opportunity?.source_url);
+    row.procurement_detail_documents_count = Number(opportunity?.detail_documents_count || 0);
+    row.procurement_detail_change_summary = text(opportunity?.detail_change_summary, 2_000);
+    row.procurement_detail_change_at = text(opportunity?.detail_change_at, 80);
+    row.procurement_opening_status = text(opportunity?.opening_status, 240);
+    row.procurement_opening_summary = text(opportunity?.opening_summary, 4_000);
+    row.procurement_participant_count = Number(opportunity?.participant_count || 0);
+    row.procurement_offer_count = Number(opportunity?.offer_count || 0);
+    row.procurement_inadmissible_count = Number(opportunity?.inadmissible_count || 0);
+    row.procurement_opening_result_updated_at = text(opportunity?.opening_result_updated_at, 80);
     const readiness = buildLegalReadiness(row);
-    const legalCase = caseMap.get(row.case_key);
+    const legacyCaseKey = row.contact_email ? `email:${row.contact_email.toLowerCase()}` : "";
+    const legalCase = caseMap.get(row.case_key) || caseMap.get(legacyCaseKey);
     row.legal_label = readiness.label;
     row.legal_tone = readiness.tone;
     row.follow_up_status = normalizeFollowUpStatus(legalCase?.follow_up_status);
@@ -515,7 +562,7 @@ export function buildLegalQueue(
     row.sla_bucket = sla.sla_bucket;
     row.urgency_label = sla.urgency_label;
     row.age_days = sla.age_days;
-    row.timeline = (eventMap.get(row.case_key) || []).sort((left, right) => compareIsoDescending(left.created_at, right.created_at));
+    row.timeline = (eventMap.get(row.case_key) || eventMap.get(legacyCaseKey) || []).sort((left, right) => compareIsoDescending(left.created_at, right.created_at));
     return row;
   });
 

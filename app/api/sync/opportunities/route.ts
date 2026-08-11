@@ -33,7 +33,18 @@ export async function POST(request: Request) {
       openingDate: item.opening_date,
       classificationCode: item.classification_code,
       sourceUrl: item.source_url,
+      publicVisible: item.public_visible,
+      detailDocumentsCount: item.detail_documents_count,
+      detailChangeSummary: item.detail_change_summary,
+      detailChangeAt: item.detail_change_at,
+      openingStatus: item.opening_status,
+      openingSummary: item.opening_summary,
+      participantCount: item.participant_count,
+      offerCount: item.offer_count,
+      inadmissibleCount: item.inadmissible_count,
+      openingResultUpdatedAt: item.opening_result_updated_at,
     }));
+    const publicCount = feed.opportunities.filter((item) => item.public_visible).length;
 
     await db.transaction(async (tx) => {
       await tx.delete(portalOpportunities);
@@ -46,14 +57,14 @@ export async function POST(request: Request) {
           id: 1,
           generatedAt: feed.generated_at,
           sourceUpdatedAt: feed.source_updated_at,
-          opportunityCount: feed.opportunities.length,
+          opportunityCount: publicCount,
         })
         .onConflictDoUpdate({
           target: portalSyncState.id,
           set: {
             generatedAt: feed.generated_at,
             sourceUpdatedAt: feed.source_updated_at,
-            opportunityCount: feed.opportunities.length,
+            opportunityCount: publicCount,
           },
         });
     });
@@ -61,7 +72,8 @@ export async function POST(request: Request) {
     return Response.json(
       {
         synchronized: true,
-        count: feed.opportunities.length,
+        count: publicCount,
+        legal_archive_count: feed.opportunities.length - publicCount,
         generated_at: feed.generated_at,
       },
       { status: 201 },

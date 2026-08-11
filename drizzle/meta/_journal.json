@@ -50,6 +50,13 @@
       "when": 1786132219510,
       "tag": "0006_condemned_captain_marvel",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1786471828454,
+      "tag": "0007_small_logan",
+      "breakpoints": true
     }
   ]
 }

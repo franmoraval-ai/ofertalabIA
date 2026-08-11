@@ -23,6 +23,7 @@ export async function GET() {
         source_url: portalOpportunities.sourceUrl,
       })
       .from(portalOpportunities)
+      .where(eq(portalOpportunities.publicVisible, true))
       .orderBy(
         asc(portalOpportunities.openingDate),
         desc(portalOpportunities.publicationDate),

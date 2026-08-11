@@ -198,6 +198,15 @@ test("adjunta resumen y enlace seguro de SICOP a la contratación", () => {
       opening_date: "2026-08-20",
       classification_code: "72101500",
       source_url: "https://www.sicop.go.cr/expediente/123",
+      detail_documents_count: 6,
+      detail_change_summary: "Se actualizó el cartel",
+      detail_change_at: "2026-08-02T10:00:00Z",
+      opening_status: "Finalizada",
+      opening_summary: "Se recibieron tres ofertas",
+      participant_count: 3,
+      offer_count: 3,
+      inadmissible_count: 1,
+      opening_result_updated_at: "2026-08-21T09:00:00Z",
     }],
   );
 
@@ -205,6 +214,66 @@ test("adjunta resumen y enlace seguro de SICOP a la contratación", () => {
   assert.equal(queue[0].procurement_status, "Publicado");
   assert.equal(queue[0].procurement_opening_date, "2026-08-20");
   assert.equal(queue[0].procurement_source_url, "https://www.sicop.go.cr/expediente/123");
+  assert.equal(queue[0].procurement_detail_documents_count, 6);
+  assert.equal(queue[0].procurement_opening_summary, "Se recibieron tres ofertas");
+  assert.equal(queue[0].procurement_participant_count, 3);
+});
+
+test("crea un caso independiente por solicitud aunque el cliente sea el mismo", () => {
+  const baseRequest = {
+    company_name: "Empresa legal",
+    contact_name: "Ana",
+    contact_email: "ana@empresa.test",
+    contact_phone: "8888-0001",
+    company_website: "",
+    company_province: "San Jose",
+    company_experience: "5 anos",
+    company_capacity: "Alta",
+    company_products: "Mantenimiento",
+    company_summary: "Ficha completa",
+    service: "integral",
+    status: "Solicitada",
+  };
+  const queue = buildLegalQueue(
+    [],
+    [
+      {
+        ...baseRequest,
+        id: "request-1",
+        opportunity_id: "2026LD-1",
+        opportunity_title: "Mantenimiento de edificio",
+        institution: "Institución A",
+        created_at: isoDaysAgo(2),
+      },
+      {
+        ...baseRequest,
+        id: "request-2",
+        opportunity_id: "2026LE-2",
+        opportunity_title: "Mantenimiento eléctrico",
+        institution: "Institución B",
+        created_at: isoDaysAgo(1),
+      },
+    ],
+    [{
+      case_key: "email:ana@empresa.test",
+      company_name: "Empresa legal",
+      contact_email: "ana@empresa.test",
+      follow_up_status: "Pendiente contacto",
+      assigned_to: "Laura",
+      assigned_team: "Legal",
+      note: "Seguimiento anterior",
+      priority_label: "Listo para Legal",
+      next_step: "Revisar solicitudes",
+      target_date: "",
+      updated_by: "admin@ofertalab.test",
+      updated_at: isoDaysAgo(1),
+    }],
+  );
+
+  assert.equal(queue.length, 2);
+  assert.deepEqual(new Set(queue.map((entry) => entry.case_key)), new Set(["request:request-1", "request:request-2"]));
+  assert.deepEqual(new Set(queue.map((entry) => entry.latest_opportunity_id)), new Set(["2026LD-1", "2026LE-2"]));
+  assert.ok(queue.every((entry) => entry.assigned_to === "Laura"));
 });
 
 test("omite los casos retirados sin eliminar la información de origen", () => {

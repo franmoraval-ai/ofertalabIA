@@ -62,6 +62,7 @@ type PublicOpportunity = {
   opening_date: string;
   classification_code: string;
   source_url: string;
+  public_visible?: boolean;
 };
 
 type OpportunityFeed = {
@@ -1045,6 +1046,16 @@ export default function Home() {
   const [requests, setRequests] = useState<ServiceRequest[]>([]);
 
   useEffect(() => {
+    const hashParams = new URLSearchParams(window.location.hash.slice(1));
+    const searchParams = new URLSearchParams(window.location.search);
+    if (hashParams.get("type") === "recovery" || searchParams.get("type") === "recovery") {
+      window.location.replace(
+        `/legal/reset-password${window.location.search}${window.location.hash}`,
+      );
+    }
+  }, []);
+
+  useEffect(() => {
     const saved = window.localStorage.getItem("ofertalab-client-profile");
     if (!saved) return;
     try {
@@ -1084,7 +1095,11 @@ export default function Home() {
     loadFeed()
       .then((feed) => {
         if (!active || !Array.isArray(feed.opportunities)) return;
-        setOpportunities(feed.opportunities.map(clientOpportunity));
+        setOpportunities(
+          feed.opportunities
+            .filter((item) => item.public_visible !== false)
+            .map(clientOpportunity),
+        );
         setGeneratedAt(feed.generated_at);
         setFeedStatus("ready");
       })

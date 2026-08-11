@@ -28,6 +28,15 @@ type LegalCase = {
   procurement_opening_date: string;
   procurement_classification_code: string;
   procurement_source_url: string;
+  procurement_detail_documents_count: number;
+  procurement_detail_change_summary: string;
+  procurement_detail_change_at: string;
+  procurement_opening_status: string;
+  procurement_opening_summary: string;
+  procurement_participant_count: number;
+  procurement_offer_count: number;
+  procurement_inadmissible_count: number;
+  procurement_opening_result_updated_at: string;
   legal_label: string;
   legal_tone: "good" | "warn" | "risk";
   follow_up_status: string;
@@ -298,6 +307,9 @@ export function LegalWorkbenchClient({
 
   const caseMetrics = useMemo(() => {
     return {
+      newRequests: queue.filter(
+        (entry) => !entry.assigned_to.trim() && entry.follow_up_status === "Sin estado" && entry.request_count > 0,
+      ).length,
       critical: queue.filter((entry) => entry.sla_bucket === "critico").length,
       today: queue.filter((entry) => entry.sla_bucket === "hoy").length,
       unassigned: queue.filter((entry) => !entry.assigned_to.trim()).length,
@@ -767,6 +779,11 @@ export function LegalWorkbenchClient({
       </section>
 
       <section className="legal-metric-grid" aria-label="Resumen de casos">
+        <button className={`legal-metric-card ready ${ownerFilter === "Sin responsable" && search === "Sin estado" ? "active" : ""}`} type="button" onClick={() => { setOwnerFilter("Sin responsable"); setSearch("Sin estado"); setSlaFilter("Todos"); }}>
+          <span>Nuevas solicitudes</span>
+          <strong>{caseMetrics.newRequests}</strong>
+          <small>Pendientes de revisar y asignar</small>
+        </button>
         <button className={`legal-metric-card critical ${slaFilter === "critico" ? "active" : ""}`} type="button" onClick={() => setSlaFilter("critico")}>
           <span>Críticos</span>
           <strong>{caseMetrics.critical}</strong>
@@ -1056,6 +1073,29 @@ export function LegalWorkbenchClient({
                     <a className="legal-sicop-link" href={selected.procurement_source_url} target="_blank" rel="noreferrer">
                       Abrir expediente en SICOP <span aria-hidden="true">↗</span>
                     </a>
+                  ) : null}
+                  {selected.procurement_detail_documents_count > 0 || selected.procurement_detail_change_summary ? (
+                    <div className="legal-procurement-evidence">
+                      <h4>Resumen del expediente</h4>
+                      <p>
+                        Documentos detectados: <strong>{selected.procurement_detail_documents_count}</strong>
+                        {selected.procurement_detail_change_at ? ` · Último cambio: ${formatDate(selected.procurement_detail_change_at)}` : ""}
+                      </p>
+                      {selected.procurement_detail_change_summary ? <p>{selected.procurement_detail_change_summary}</p> : null}
+                    </div>
+                  ) : null}
+                  {selected.procurement_opening_status || selected.procurement_opening_summary ? (
+                    <div className="legal-procurement-evidence">
+                      <h4>Resultado de apertura</h4>
+                      <dl className="legal-facts">
+                        <div><dt>Estado</dt><dd>{selected.procurement_opening_status || "Sin estado"}</dd></div>
+                        <div><dt>Participantes</dt><dd>{selected.procurement_participant_count}</dd></div>
+                        <div><dt>Ofertas</dt><dd>{selected.procurement_offer_count}</dd></div>
+                        <div><dt>Inadmisibles</dt><dd>{selected.procurement_inadmissible_count}</dd></div>
+                      </dl>
+                      {selected.procurement_opening_summary ? <p>{selected.procurement_opening_summary}</p> : null}
+                      {selected.procurement_opening_result_updated_at ? <small>Actualizado: {formatDate(selected.procurement_opening_result_updated_at)}</small> : null}
+                    </div>
                   ) : null}
                   <p className="legal-procurement-note">
                     {selected.procurement_source_url

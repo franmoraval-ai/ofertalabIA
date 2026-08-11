@@ -24,11 +24,40 @@ export function LegalLoginForm({ next }: { next: string }) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
+  const [notice, setNotice] = useState("");
   const [loading, setLoading] = useState(false);
+
+  async function recoverPassword() {
+    setError("");
+    setNotice("");
+    if (!supabase) {
+      setError("Supabase Auth no está configurado correctamente para recuperar el acceso.");
+      return;
+    }
+    if (!email.trim()) {
+      setError("Escriba su correo para enviar el enlace de recuperación.");
+      return;
+    }
+    setLoading(true);
+    try {
+      const { error: recoveryError } = await supabase.auth.resetPasswordForEmail(email.trim(), {
+        redirectTo: `${window.location.origin}/legal/reset-password`,
+      });
+      if (recoveryError) {
+        throw recoveryError;
+      }
+      setNotice("Revise su correo. Le enviamos un enlace para definir una contraseña nueva.");
+    } catch (caughtError) {
+      setError(caughtError instanceof Error ? caughtError.message : "No se pudo enviar el enlace de recuperación.");
+    } finally {
+      setLoading(false);
+    }
+  }
 
   async function onSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setError("");
+    setNotice("");
     if (!supabase) {
       setError(
         "Supabase Auth no está configurado correctamente para Mesa Legal. Revise NEXT_PUBLIC_SUPABASE_URL y NEXT_PUBLIC_SUPABASE_ANON_KEY.",
@@ -96,8 +125,12 @@ export function LegalLoginForm({ next }: { next: string }) {
             />
           </label>
           {error ? <p className="legal-error">{error}</p> : null}
+          {notice ? <p className="legal-login-copy">{notice}</p> : null}
           <button className="primary" type="submit" disabled={loading}>
             {loading ? "Entrando..." : "Entrar a Mesa Legal"}
+          </button>
+          <button className="secondary" type="button" disabled={loading} onClick={recoverPassword}>
+            ¿Olvidó su contraseña?
           </button>
         </form>
       </section>

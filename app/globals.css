@@ -866,6 +866,19 @@ button { cursor: pointer; }
 
 .legal-procurement-card { border-left: 3px solid var(--teal); }
 
+.legal-procurement-evidence {
+  background: white;
+  border: 1px solid rgba(8, 40, 62, .1);
+  border-radius: 8px;
+  margin-top: 14px;
+  padding: 14px;
+}
+
+.legal-procurement-evidence h4 { margin: 0 0 8px; }
+.legal-procurement-evidence p { color: var(--soft); line-height: 1.5; margin: 7px 0; }
+.legal-procurement-evidence .legal-facts { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.legal-procurement-evidence small { color: var(--soft); }
+
 .legal-procurement-note {
   border-top: 1px solid rgba(8, 40, 62, .08);
   color: var(--soft);

@@ -2,7 +2,7 @@ import { NextResponse, type NextRequest } from "next/server";
 
 import { authenticateLegalRequest } from "@/lib/legal-auth";
 
-const PUBLIC_LEGAL_PATHS = new Set(["/legal/login", "/legal/activate"]);
+const PUBLIC_LEGAL_PATHS = new Set(["/legal/login", "/legal/activate", "/legal/reset-password"]);
 const LEGACY_PUBLIC_HOST = "ofertalab-ia.vercel.app";
 const CANONICAL_PUBLIC_HOST = "ofertalabcr.com";
 

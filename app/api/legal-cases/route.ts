@@ -131,6 +131,15 @@ export async function GET(request: Request) {
           opening_date: portalOpportunities.openingDate,
           classification_code: portalOpportunities.classificationCode,
           source_url: portalOpportunities.sourceUrl,
+          detail_documents_count: portalOpportunities.detailDocumentsCount,
+          detail_change_summary: portalOpportunities.detailChangeSummary,
+          detail_change_at: portalOpportunities.detailChangeAt,
+          opening_status: portalOpportunities.openingStatus,
+          opening_summary: portalOpportunities.openingSummary,
+          participant_count: portalOpportunities.participantCount,
+          offer_count: portalOpportunities.offerCount,
+          inadmissible_count: portalOpportunities.inadmissibleCount,
+          opening_result_updated_at: portalOpportunities.openingResultUpdatedAt,
         })
         .from(portalOpportunities)
         .limit(5_000),

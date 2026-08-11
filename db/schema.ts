@@ -1,4 +1,4 @@
-import { integer, pgTable, text } from "drizzle-orm/pg-core";
+import { boolean, integer, pgTable, text } from "drizzle-orm/pg-core";
 
 export const portalOpportunities = pgTable("portal_opportunities", {
   procedureNo: text("procedure_no").primaryKey(),
@@ -11,6 +11,16 @@ export const portalOpportunities = pgTable("portal_opportunities", {
   openingDate: text("opening_date").notNull(),
   classificationCode: text("classification_code").notNull().default(""),
   sourceUrl: text("source_url").notNull().default(""),
+  publicVisible: boolean("public_visible").notNull().default(true),
+  detailDocumentsCount: integer("detail_documents_count").notNull().default(0),
+  detailChangeSummary: text("detail_change_summary").notNull().default(""),
+  detailChangeAt: text("detail_change_at").notNull().default(""),
+  openingStatus: text("opening_status").notNull().default(""),
+  openingSummary: text("opening_summary").notNull().default(""),
+  participantCount: integer("participant_count").notNull().default(0),
+  offerCount: integer("offer_count").notNull().default(0),
+  inadmissibleCount: integer("inadmissible_count").notNull().default(0),
+  openingResultUpdatedAt: text("opening_result_updated_at").notNull().default(""),
 });
 
 export const portalSyncState = pgTable("portal_sync_state", {
