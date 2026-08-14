@@ -6,6 +6,7 @@ import {
   describeProfileSector,
   daysUntilClosing,
   hasClientPreparationWindow,
+  isClosingTodayOrLater,
   rankOpportunities,
 } from "./opportunity-matching";
 
@@ -636,11 +637,14 @@ function Dashboard({
   onFollow: (item: Opportunity) => void;
 }) {
   const matches = rankOpportunities(profile.products, opportunities);
-  const preparedMatches = matches.filter((item) =>
+  const activeMatches = matches.filter((item) =>
+    isClosingTodayOrLater(item.openingDate),
+  );
+  const preparedMatches = activeMatches.filter((item) =>
     hasClientPreparationWindow(item.openingDate),
   );
   const visibleOpportunities = preparedMatches.slice(0, 12);
-  const urgentMatches = matches
+  const urgentMatches = activeMatches
     .filter((item) => !hasClientPreparationWindow(item.openingDate))
     .slice(0, 6);
   const followedIds = new Set(

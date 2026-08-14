@@ -5,6 +5,7 @@ import { authenticateLegalRequest } from "@/lib/legal-auth";
 const PUBLIC_LEGAL_PATHS = new Set(["/legal/login", "/legal/activate", "/legal/reset-password"]);
 const LEGACY_PUBLIC_HOST = "ofertalab-ia.vercel.app";
 const CANONICAL_PUBLIC_HOST = "ofertalabcr.com";
+const VERTICE_LEGAL_HOST = "vertice.ofertalabcr.com";
 
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
@@ -15,6 +16,10 @@ export async function middleware(request: NextRequest) {
     destination.hostname = CANONICAL_PUBLIC_HOST;
     destination.port = "";
     return NextResponse.redirect(destination, 308);
+  }
+
+  if (host === VERTICE_LEGAL_HOST && pathname === "/") {
+    return NextResponse.rewrite(new URL("/vertice-legal", request.url));
   }
 
   if (!pathname.startsWith("/legal")) {

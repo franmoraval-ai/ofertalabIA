@@ -6,6 +6,7 @@ import {
   describeProfileSector,
   daysUntilClosing,
   hasClientPreparationWindow,
+  isClosingTodayOrLater,
   rankOpportunities,
 } from "../app/opportunity-matching.ts";
 
@@ -48,6 +49,14 @@ test("prioriza oportunidades con al menos quince días de preparación", () => {
   assert.equal(hasClientPreparationWindow("2026-08-17", today), false);
   assert.equal(daysUntilClosing("2026-08-18", today), 15);
   assert.equal(hasClientPreparationWindow("2026-08-18", today), true);
+});
+
+test("no trata una oportunidad vencida como si cerrara hoy", () => {
+  const today = new Date("2026-08-03T12:00:00");
+
+  assert.equal(daysUntilClosing("2026-08-01", today), -2);
+  assert.equal(isClosingTodayOrLater("2026-08-01", today), false);
+  assert.equal(isClosingTodayOrLater("2026-08-03", today), true);
 });
 
 test("un perfil de comida recibe alimentación y no seguridad", () => {

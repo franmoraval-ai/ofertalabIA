@@ -15,7 +15,14 @@ export function daysUntilClosing(openingDate: string, now = new Date()) {
   const closing = new Date(`${openingDate}T12:00:00`);
   const today = new Date(now);
   today.setHours(12, 0, 0, 0);
-  return Math.max(0, Math.ceil((closing.getTime() - today.getTime()) / 86_400_000));
+  return Math.ceil((closing.getTime() - today.getTime()) / 86_400_000);
+}
+
+export function isClosingTodayOrLater(
+  openingDate: string,
+  now = new Date(),
+) {
+  return daysUntilClosing(openingDate, now) >= 0;
 }
 
 export function hasClientPreparationWindow(
