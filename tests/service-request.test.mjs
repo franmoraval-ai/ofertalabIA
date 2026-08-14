@@ -1,16 +1,7 @@
 import assert from "node:assert/strict";
-import { readFile } from "node:fs/promises";
 import test from "node:test";
 
 import { validateServiceRequest } from "../app/api/requests/service-request.ts";
-
-test("el endpoint prepara columnas de solicitudes de versiones anteriores", async () => {
-  const route = await readFile(new URL("../app/api/requests/route.ts", import.meta.url), "utf8");
-
-  assert.match(route, /ensureServiceRequestSchema/);
-  assert.match(route, /add column if not exists company_name/);
-  assert.match(route, /add column if not exists company_summary/);
-});
 
 test("acepta una solicitud válida y deriva id y estado", () => {
   const result = validateServiceRequest({

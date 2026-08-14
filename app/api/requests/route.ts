@@ -1,4 +1,4 @@
-import { desc, sql } from "drizzle-orm";
+import { desc } from "drizzle-orm";
 
 import { getDb } from "../../../db";
 import { serviceRequests } from "../../../db/schema";
@@ -10,35 +10,6 @@ export const dynamic = "force-dynamic";
 
 const MAX_BODY_BYTES = 8_000;
 
-const SERVICE_REQUEST_SCHEMA_STATEMENTS = [
-  "alter table service_requests add column if not exists company_name text not null default ''",
-  "alter table service_requests add column if not exists contact_email text not null default ''",
-  "alter table service_requests add column if not exists contact_phone text not null default ''",
-  "alter table service_requests add column if not exists company_website text not null default ''",
-  "alter table service_requests add column if not exists company_province text not null default ''",
-  "alter table service_requests add column if not exists company_experience text not null default ''",
-  "alter table service_requests add column if not exists company_capacity text not null default ''",
-  "alter table service_requests add column if not exists company_products text not null default ''",
-  "alter table service_requests add column if not exists company_summary text not null default ''",
-] as const;
-
-let serviceRequestSchemaReady: Promise<void> | undefined;
-
-function ensureServiceRequestSchema() {
-  if (!serviceRequestSchemaReady) {
-    serviceRequestSchemaReady = (async () => {
-      const db = getDb();
-      for (const statement of SERVICE_REQUEST_SCHEMA_STATEMENTS) {
-        await db.execute(sql.raw(statement));
-      }
-    })().catch((error) => {
-      serviceRequestSchemaReady = undefined;
-      throw error;
-    });
-  }
-  return serviceRequestSchemaReady;
-}
-
 export async function POST(request: Request) {
   const raw = await request.text();
   if (raw.length > MAX_BODY_BYTES) {
@@ -47,7 +18,6 @@ export async function POST(request: Request) {
 
   try {
     const entry = validateServiceRequest(JSON.parse(raw));
-    await ensureServiceRequestSchema();
     const db = getDb();
     await db
       .insert(serviceRequests)
