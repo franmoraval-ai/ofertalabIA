@@ -41,8 +41,8 @@ body {
 .vertice-container { margin: 0 auto; max-width: 1200px; padding-left: 28px; padding-right: 28px; }
 .vertice-nav { align-items: center; background: #030708; border-bottom: 1px solid rgba(190, 202, 207, .22); display: grid; grid-template-columns: 1fr auto 1fr; min-height: 78px; padding: 0 max(28px, calc((100vw - 1200px) / 2)); position: relative; z-index: 3; }
 .vertice-brand { align-items: center; color: var(--vertice-ink); display: inline-flex; font-family: Georgia, serif; gap: 10px; text-decoration: none; }
-.vertice-logo-image { display: block; height: 66px; overflow: hidden; position: relative; width: 230px; }
-.vertice-logo-image img { object-fit: cover; object-position: center 51%; }
+.vertice-logo-image { display: block; height: 72px; overflow: hidden; position: relative; width: 250px; }
+.vertice-logo-image img { filter: brightness(3.1) contrast(1.08) saturate(.75); object-fit: cover; object-position: center 51%; }
 .vertice-nav nav { display: flex; gap: 28px; }
 .vertice-nav nav a { color: #c7d0d4; font-family: ui-sans-serif, sans-serif; font-size: 13px; font-weight: 700; text-decoration: none; }
 .vertice-nav nav a:hover, .vertice-quiet-link:hover { color: var(--vertice-lime); }
@@ -112,10 +112,10 @@ body {
 .vertice-footer { background: #030708; color: white; }
 .vertice-footer > div { align-items: center; display: flex; justify-content: space-between; min-height: 110px; }
 .vertice-footer .vertice-brand { color: white; }
-.vertice-footer-logo { height: 60px; width: 190px; }
+.vertice-footer-logo { height: 64px; width: 210px; }
 .vertice-footer p { color: #bbc4c2; font-family: ui-sans-serif, sans-serif; font-size: 12px; margin: 0; }
 @media (max-width: 760px) {
-  .vertice-nav { grid-template-columns: 1fr auto; min-height: 70px; } .vertice-logo-image { height: 57px; width: 180px; } .vertice-nav nav { display: none; } .vertice-nav-action { font-size: 12px; }
+  .vertice-nav { grid-template-columns: 1fr auto; min-height: 70px; } .vertice-logo-image { height: 60px; width: 190px; } .vertice-nav nav { display: none; } .vertice-nav-action { font-size: 12px; }
   .vertice-hero { min-height: 670px; } .vertice-hero-shade { background: linear-gradient(90deg, rgba(3, 7, 8, .96), rgba(18, 39, 37, .76)); } .vertice-hero-content { padding-bottom: 140px; padding-top: 100px; }
   .vertice-hero h1 { font-size: 55px; } .vertice-hero-lede { font-size: 16px; } .vertice-hero-actions { align-items: flex-start; flex-direction: column; gap: 22px; }
   .vertice-hero-note { align-items: flex-start; font-size: 11px; padding-bottom: 15px; padding-top: 15px; }
