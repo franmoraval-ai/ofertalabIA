@@ -10,6 +10,7 @@ test("the Vertice Legal public route offers a real legal intake", async () => {
   assert.match(page, /Vértice Legal/);
   assert.match(page, /https:\/\/vertice\.ofertalabcr\.com/);
   assert.match(client, /Evaluar mi trámite/);
+  assert.match(client, /vertice-legal-logo\.png/);
   assert.match(client, /\/api\/requests/);
   assert.match(client, /vertice-legal:/);
   assert.match(client, /No comparta contraseñas/);

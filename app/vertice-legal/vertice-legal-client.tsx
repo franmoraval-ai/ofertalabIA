@@ -9,10 +9,10 @@ import {
   FileSearch,
   Landmark,
   MessageCircle,
-  Scale,
   Send,
   ShieldCheck,
 } from "lucide-react";
+import Image from "next/image";
 import { FormEvent, useState } from "react";
 
 type FormStatus = "idle" | "sending" | "sent" | "error";
@@ -99,8 +99,7 @@ export function VerticeLegalClient() {
     <main className="vertice-page">
       <header className="vertice-nav">
         <a className="vertice-brand" href="#inicio" aria-label="Vértice Legal, inicio">
-          <span className="vertice-mark"><Scale size={23} strokeWidth={1.8} /></span>
-          <span><strong>Vértice</strong><small>Legal</small></span>
+          <span className="vertice-logo-image" style={{ position: "relative", display: "block", width: 230, height: 66, overflow: "hidden" }}><Image src="/vertice-legal-logo.png" alt="Vértice Legal" fill priority sizes="(max-width: 760px) 175px, 230px" /></span>
         </a>
         <nav aria-label="Navegación Vértice Legal">
           <a href="#servicios">Servicios</a>
@@ -219,7 +218,7 @@ export function VerticeLegalClient() {
       </section>
 
       <footer className="vertice-footer">
-        <div className="vertice-container"><span className="vertice-brand"><span className="vertice-mark"><Scale size={18} /></span><span><strong>Vértice</strong><small>Legal</small></span></span><p>Gestión legal con ruta, respaldo y seguimiento.</p></div>
+        <div className="vertice-container"><span className="vertice-brand"><span className="vertice-logo-image vertice-footer-logo" style={{ position: "relative", display: "block", width: 190, height: 60, overflow: "hidden" }}><Image src="/vertice-legal-logo.png" alt="Vértice Legal" fill sizes="180px" /></span></span><p>Gestión legal con ruta, respaldo y seguimiento.</p></div>
       </footer>
     </main>
   );
