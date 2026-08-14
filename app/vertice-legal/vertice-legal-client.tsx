@@ -15,6 +15,8 @@ import {
 import Image from "next/image";
 import { FormEvent, useState } from "react";
 
+import { buildVerticeLegalRequest } from "./intake-request";
+
 type FormStatus = "idle" | "sending" | "sent" | "error";
 
 const procedures = [
@@ -41,10 +43,6 @@ const steps = [
   ["03", "Damos seguimiento", "Usted recibe un siguiente paso claro sin perder el control de decisiones y firmas."],
 ];
 
-function procedureKey(value: string) {
-  return value.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "") || "consulta";
-}
-
 export function VerticeLegalClient() {
   const [status, setStatus] = useState<FormStatus>("idle");
   const [message, setMessage] = useState("");
@@ -66,22 +64,7 @@ export function VerticeLegalClient() {
       const response = await fetch("/api/requests", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          opportunity_id: `vertice-legal:${procedureKey(procedure)}:${email.toLowerCase()}`,
-          opportunity_title: `Gestión Vértice Legal: ${procedure}`,
-          institution: "Vértice Legal",
-          service: "integral",
-          company_name: company,
-          contact_name: contact,
-          contact_email: email,
-          contact_phone: phone,
-          company_website: "",
-          company_province: "Costa Rica",
-          company_experience: "Consulta de trámite",
-          company_capacity: "Por definir",
-          company_products: procedure,
-          company_summary: detail,
-        }),
+        body: JSON.stringify(buildVerticeLegalRequest({ procedure, company, contact, email, phone, detail })),
       });
       const payload = await response.json() as { error?: string };
       if (!response.ok) {
@@ -205,10 +188,10 @@ export function VerticeLegalClient() {
               <label>Persona de contacto<input name="contact" required placeholder="Nombre y apellido" /></label>
               <div className="vertice-form-pair">
                 <label>Correo electrónico<input name="email" type="email" required placeholder="correo@empresa.com" /></label>
-                <label>Teléfono<input name="phone" inputMode="tel" placeholder="8888-0000" /></label>
+                <label>Teléfono<input name="phone" inputMode="tel" required placeholder="8888-0000" /></label>
               </div>
               <label>Tipo de trámite<select name="procedure" defaultValue="" required><option value="" disabled>Seleccione una opción</option><option>Revisión de requisitos</option><option>Gestión de documentos</option><option>Seguimiento de expediente</option><option>Consulta legal empresarial</option></select></label>
-              <label>Contexto del trámite<textarea name="detail" rows={4} placeholder="Qué necesita resolver, plazos conocidos y documentos disponibles." /></label>
+              <label>Contexto del trámite<textarea name="detail" rows={4} required placeholder="Qué necesita resolver, plazos conocidos y documentos disponibles." /></label>
               {status === "error" ? <p className="vertice-form-error" role="alert">{message}</p> : null}
               <button className="vertice-button vertice-button-dark" type="submit" disabled={status === "sending"}>{status === "sending" ? "Enviando solicitud..." : <>Enviar para valoración <Send size={17} /></>}</button>
               <small>Al enviar, autoriza el contacto sobre esta consulta. No comparta contraseñas, PIN, certificados ni firmas digitales.</small>
