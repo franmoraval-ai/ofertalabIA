@@ -25,13 +25,13 @@ body {
 }
 
 .vertice-page {
-  --vertice-ink: #18322d;
-  --vertice-forest: #174b40;
-  --vertice-sage: #dce7dd;
-  --vertice-lime: #b6d16a;
-  --vertice-clay: #c9694e;
-  --vertice-paper: #f7f4ed;
-  --vertice-line: rgba(24, 50, 45, .18);
+  --vertice-ink: #202827;
+  --vertice-forest: #1f4d45;
+  --vertice-sage: #e7e9e6;
+  --vertice-lime: #9ba9a4;
+  --vertice-clay: #a98562;
+  --vertice-paper: #f5f6f3;
+  --vertice-line: rgba(32, 40, 39, .18);
   background: var(--vertice-paper);
   color: var(--vertice-ink);
   font-family: Georgia, "Times New Roman", serif;
@@ -49,7 +49,7 @@ body {
 .vertice-nav-action { align-items: center; color: #e6ecee; display: inline-flex; font-family: ui-sans-serif, sans-serif; font-size: 13px; font-weight: 800; gap: 7px; justify-self: end; text-decoration: none; }
 .vertice-hero { background: var(--vertice-forest); color: white; min-height: 690px; overflow: hidden; position: relative; }
 .vertice-hero-image { background-image: url("https://images.unsplash.com/photo-1450101499163-c8848c66ca85?auto=format&fit=crop&w=2200&q=85"); background-position: center; background-size: cover; inset: 0; position: absolute; }
-.vertice-hero-shade { background: linear-gradient(90deg, rgba(12, 42, 35, .97) 5%, rgba(16, 61, 51, .88) 49%, rgba(13, 52, 44, .42) 100%); inset: 0; position: absolute; }
+.vertice-hero-shade { background: linear-gradient(90deg, rgba(3, 7, 8, .97) 5%, rgba(18, 39, 37, .9) 49%, rgba(20, 39, 38, .46) 100%); inset: 0; position: absolute; }
 .vertice-hero-content { padding-bottom: 158px; padding-top: 130px; position: relative; }
 .vertice-kicker { align-items: center; color: var(--vertice-lime); display: flex; font-family: ui-sans-serif, sans-serif; font-size: 11px; font-weight: 800; gap: 9px; letter-spacing: 1.7px; margin: 0; text-transform: uppercase; }
 .vertice-kicker span { background: currentColor; display: inline-block; height: 2px; width: 31px; }
@@ -60,7 +60,7 @@ body {
 .vertice-hero-actions { align-items: center; display: flex; gap: 25px; margin-top: 36px; }
 .vertice-button { align-items: center; border: 1px solid transparent; display: inline-flex; font-family: ui-sans-serif, sans-serif; font-size: 14px; font-weight: 800; gap: 18px; justify-content: center; min-height: 51px; padding: 0 20px; text-decoration: none; transition: transform 160ms ease, background 160ms ease; }
 .vertice-button:hover { transform: translateY(-2px); }
-.vertice-button-light { background: var(--vertice-lime); color: #173c32; }
+.vertice-button-light { background: var(--vertice-lime); color: #15211f; }
 .vertice-button-dark { background: var(--vertice-forest); color: white; width: 100%; }
 .vertice-button:disabled { cursor: wait; opacity: .7; transform: none; }
 .vertice-quiet-link { color: white; font-family: ui-sans-serif, sans-serif; font-size: 13px; font-weight: 800; text-decoration: underline; text-decoration-color: var(--vertice-lime); text-underline-offset: 6px; }
@@ -98,11 +98,11 @@ body {
 .vertice-contact-points svg { color: var(--vertice-lime); flex: 0 0 auto; }
 .vertice-form, .vertice-success { background: var(--vertice-paper); color: var(--vertice-ink); padding: 30px; }
 .vertice-form label { display: grid; font-family: ui-sans-serif, sans-serif; font-size: 12px; font-weight: 800; gap: 7px; margin-bottom: 17px; }
-.vertice-form input, .vertice-form select, .vertice-form textarea { background: white; border: 1px solid #b9c8bd; border-radius: 0; color: var(--vertice-ink); font-family: ui-sans-serif, sans-serif; font-size: 14px; min-height: 44px; padding: 10px 11px; width: 100%; }
+.vertice-form input, .vertice-form select, .vertice-form textarea { background: white; border: 1px solid #bdc4c0; border-radius: 0; color: var(--vertice-ink); font-family: ui-sans-serif, sans-serif; font-size: 14px; min-height: 44px; padding: 10px 11px; width: 100%; }
 .vertice-form textarea { resize: vertical; }
-.vertice-form input:focus, .vertice-form select:focus, .vertice-form textarea:focus { border-color: var(--vertice-clay); outline: 2px solid rgba(201, 105, 78, .2); }
+.vertice-form input:focus, .vertice-form select:focus, .vertice-form textarea:focus { border-color: var(--vertice-clay); outline: 2px solid rgba(169, 133, 98, .2); }
 .vertice-form-pair { display: grid; gap: 14px; grid-template-columns: 1fr 1fr; }
-.vertice-form small { color: #60746d; display: block; font-family: ui-sans-serif, sans-serif; font-size: 11px; line-height: 1.5; margin-top: 14px; }
+.vertice-form small { color: #586561; display: block; font-family: ui-sans-serif, sans-serif; font-size: 11px; line-height: 1.5; margin-top: 14px; }
 .vertice-form-error { color: #a33422; font-family: ui-sans-serif, sans-serif; font-size: 13px; font-weight: 700; margin: -3px 0 13px; }
 .vertice-success { min-height: 380px; padding: 47px; }
 .vertice-success > span { align-items: center; background: var(--vertice-lime); color: var(--vertice-forest); display: inline-flex; height: 56px; justify-content: center; width: 56px; }
@@ -113,10 +113,10 @@ body {
 .vertice-footer > div { align-items: center; display: flex; justify-content: space-between; min-height: 110px; }
 .vertice-footer .vertice-brand { color: white; }
 .vertice-footer-logo { height: 60px; width: 190px; }
-.vertice-footer p { color: #bfcec5; font-family: ui-sans-serif, sans-serif; font-size: 12px; margin: 0; }
+.vertice-footer p { color: #bbc4c2; font-family: ui-sans-serif, sans-serif; font-size: 12px; margin: 0; }
 @media (max-width: 760px) {
   .vertice-nav { grid-template-columns: 1fr auto; min-height: 70px; } .vertice-logo-image { height: 57px; width: 180px; } .vertice-nav nav { display: none; } .vertice-nav-action { font-size: 12px; }
-  .vertice-hero { min-height: 670px; } .vertice-hero-shade { background: linear-gradient(90deg, rgba(12, 42, 35, .96), rgba(15, 64, 53, .72)); } .vertice-hero-content { padding-bottom: 140px; padding-top: 100px; }
+  .vertice-hero { min-height: 670px; } .vertice-hero-shade { background: linear-gradient(90deg, rgba(3, 7, 8, .96), rgba(18, 39, 37, .76)); } .vertice-hero-content { padding-bottom: 140px; padding-top: 100px; }
   .vertice-hero h1 { font-size: 55px; } .vertice-hero-lede { font-size: 16px; } .vertice-hero-actions { align-items: flex-start; flex-direction: column; gap: 22px; }
   .vertice-hero-note { align-items: flex-start; font-size: 11px; padding-bottom: 15px; padding-top: 15px; }
   .vertice-intro, .vertice-intake-grid { gap: 30px; grid-template-columns: 1fr; } .vertice-intro { padding-bottom: 40px; padding-top: 75px; }
